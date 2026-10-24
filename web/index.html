@@ -49,7 +49,7 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <h2 style="margin-top:14px">Add a captain</h2><div class="f"><input id="cm" placeholder="Captain name (Imtiaz Ali)"><input id="cph" placeholder="WhatsApp (92300XXXXXXX)"><select id="cb"></select><button class="p" id="ca">Create captain</button></div>
 <p id="cr" style="color:var(--ok)"></p><p class="err" id="ce"></p></section></div>
 <div id="t-st" class="hide"><section><h2>Company</h2><p id="ci" style="color:var(--mu)"></p>
-<h2>Backup and reports</h2><div class="f"><input id="bu" placeholder="Your Apps Script Web App URL (optional backup)"><input id="wn" placeholder="Owner WhatsApp for nightly report"><button class="p" id="bs">Save</button></div><p id="bm" class="err"></p></section></div>
+<h2>Backup and reports</h2><div class="f"><input id="bu" placeholder="Your Google Sheet link (optional backup)"><input id="wn" placeholder="Owner WhatsApp for nightly report"><button class="p" id="bs">Save</button></div><p id="bsh" style="color:var(--mu)"></p><p id="bm" class="err"></p></section></div>
 </main></div>
 
 <div id="m" role="dialog" aria-modal="true"><div><h2>Plan ended or payment due</h2>
@@ -79,7 +79,7 @@ function enter(){$("auth").classList.add("hide");$("app").classList.remove("hide
 $("lo").onclick=()=>{ls.s("mo_t","");location.reload()};
 // ---- render ----
 function show(){enter();const c=D.company;$("cn").textContent=c.name;$("ci").innerHTML="Company code: <b>"+E(c.code)+"</b> (staff use this in the app)<br>Portal: "+E(c.portalUrl);
-$("bu").value=c.backupUrl;$("wn").value=c.wa;fillCity();subBar();loadReport()}
+$("bu").value=c.backupUrl;$("bsh").textContent=c.shareWith?"Backup ke liye apni Google Sheet ko is email par Editor share karo: "+c.shareWith+". Phir uska link upar paste karke Save dabao. Logs aur attendance wahan khud aate rahenge.":"";$("wn").value=c.wa;fillCity();subBar();loadReport()}
 function subBar(){const s=D.sub,d=s.trialEnd?Math.max(0,Math.ceil((s.trialEnd-Date.now())/864e5)):s.validUntil?Math.ceil((s.validUntil-Date.now())/864e5):0;
 $("sub").innerHTML=s.status==="ACTIVE"?`<span class="b ok">Active</span> ${d} days left`:`<span class="b wa">Trial</span> ${d} days left`}
 function lock(st){const M={PENDING:"Payment verification pending",REJECTED:"Payment rejected - send the correct TID",EXPIRED:"Plan expired - renew"};$("sub").innerHTML='<span class="b bd">Locked</span> '+(M[st]||"Payment needed");$("m").classList.add("on");$("cl").classList.add("hide")}

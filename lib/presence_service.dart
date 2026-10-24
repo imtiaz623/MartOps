@@ -4,7 +4,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 
-const pingEvery = Duration(minutes: 3);      // local Wi-Fi check
+const pingEvery = Duration(minutes: 1);      // local Wi-Fi check
 const keepAlive = Duration(minutes: 10);     // server heartbeat while state is unchanged (saves Apps Script quota)
 
 @pragma('vm:entry-point')
@@ -26,17 +26,18 @@ class PresenceHandler extends TaskHandler {
   DateTime lastSent = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
-  Future<void> onStart(DateTime ts, TaskStarter s) async {}
+  Future<void> onStart(DateTime ts, TaskStarter s) async { await onRepeatEvent(ts); }
 
   @override
   Future<void> onRepeatEvent(DateTime ts) async {
     final p = await SharedPreferences.getInstance();
     await p.reload();
     final cfg = jsonDecode(p.getString('cfg') ?? '{}') as Map;
-    final allowed = ((cfg['wifi'] ?? []) as List).map((e) => e.toString().toLowerCase()).toList();
+    final allowed = ((cfg['wifi'] ?? []) as List).map((e) => e.toString().trim().toLowerCase()).toList();
 
     final info = NetworkInfo();
-    final ssid = (await info.getWifiName())?.replaceAll('"', '').toLowerCase();
+    final ssid = (await info.getWifiName())?.replaceAll('"', '').trim().toLowerCase();
+    final unknown = ssid == null || ssid.isEmpty || ssid.contains('unknown ssid');
     final bssid = (await info.getWifiBSSID())?.toLowerCase();
     // Connected to ANY of the (up to 4) authorized branch networks => in store.
     final inStore = (ssid != null && allowed.contains(ssid)) || (bssid != null && allowed.contains(bssid));
@@ -53,7 +54,7 @@ class PresenceHandler extends TaskHandler {
         if (inStore) await p.remove('leftAt');  // only forget the out-time once the server has logged it
       }
     }
-    FlutterForegroundTask.sendDataToMain({'inStore': inStore});
+    FlutterForegroundTask.sendDataToMain({'inStore': inStore, 'unknown': unknown, 'ssid': ssid ?? ''});
   }
 
   @override
