@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:location/location.dart' as lc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
@@ -18,7 +19,7 @@ class _StaffHomeState extends State<StaffHome> {
   Map? me;
   List visits = [];
   bool running = false, unknown = false, starting = false;
-  String err = '', ssid = '', permMsg = '', cur = '', hint = '';
+  String err = '', ssid = '', permMsg = '', cur = '', seen = '', hint = '';
   bool diagBusy = false;
 
   @override
@@ -33,7 +34,7 @@ class _StaffHomeState extends State<StaffHome> {
 
   void _onData(Object d) {
     if (d is Map && mounted) {
-      setState(() { cur = '${d['cur'] ?? ''}'; unknown = d['unknown'] == true; ssid = '${d['ssid'] ?? ''}'; });
+      setState(() { cur = '${d['cur'] ?? ''}'; seen = '${d['seen'] ?? ''}'; unknown = d['unknown'] == true; ssid = '${d['ssid'] ?? ''}'; });
       if (unknown) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
     }
   }
@@ -56,7 +57,19 @@ class _StaffHomeState extends State<StaffHome> {
                 : 'Phone Wi-Fi se connected hona chahiye. Connected ho to Location precise on hai ya nahi check karo.');
   }
 
+  /// Android can't switch GPS on silently; this shows the one-tap system dialog "Turn on location".
+  Future<void> _ensureGps() async {
+    try {
+      final l = lc.Location();
+      if (!await l.serviceEnabled()) await l.requestService();
+    } catch (_) {}
+  }
+
   Future<void> _load() async {
+    running = await FlutterForegroundTask.isRunningService;
+    final p = await SharedPreferences.getInstance();
+    // Fast start: use the saved branch/Wi-Fi list so tracking begins before the server replies.
+    if (!running && (p.getString('cfg') ?? '').contains('"id"')) { await _startService(); }
     final r = await Session.call('me');
     final v = await Session.call('myVisits');
     running = await FlutterForegroundTask.isRunningService;
@@ -66,22 +79,29 @@ class _StaffHomeState extends State<StaffHome> {
       if (v['ok'] == true) visits = v['visits'];
     });
     await _ensureTracking();
+    if (running) _ensureGps();
   }
 
   Future<void> _ensureTracking() async {
-    if (starting || me == null) return;
+    if (me == null) return;
     final branches = (me?['branches'] ?? []) as List;
     final p = await SharedPreferences.getInstance();
     // Latest token + branch/Wi-Fi list is saved every time so the background service always has it.
     await p.setString('cfg', jsonEncode({'token': Session.token, 'branches': [for (final b in branches) {'id': b['id'], 'name': b['name'], 'wifi': b['wifi']}]}));
     if (branches.isEmpty) { setState(() => permMsg = 'Owner ne abhi koi branch / Wi-Fi add nahi kiya.'); return; }
     if (running) { setState(() => permMsg = ''); return; }
+    await _startService();
+  }
+
+  Future<void> _startService() async {
+    if (starting) return;
     starting = true;
     try {
       if (!await Permission.locationWhenInUse.request().isGranted) {
-        setState(() => permMsg = 'Location permission zaroori hai (Wi-Fi ka naam padhne ke liye). Neeche button dabao.');
+        if (mounted) setState(() => permMsg = 'Location permission zaroori hai (Wi-Fi ka naam padhne ke liye). Neeche button dabao.');
         return;
       }
+      await _ensureGps();
       await Permission.notification.request();
       await Permission.locationAlways.request(); // app band hone par bhi Wi-Fi naam padhne ke liye
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
@@ -94,7 +114,8 @@ class _StaffHomeState extends State<StaffHome> {
 
   String get _where {
     final bs = (me?['branches'] ?? []) as List;
-    for (final b in bs) { if ('${b['id']}' == cur) return '${b['name']}${'${b['city']}'.isEmpty ? '' : ', ${b['city']}'}'; }
+    final id = seen.isNotEmpty ? seen : cur;
+    for (final b in bs) { if ('${b['id']}' == id) return '${b['name']}${'${b['city']}'.isEmpty ? '' : ', ${b['city']}'}'; }
     return '';
   }
 
@@ -115,12 +136,15 @@ class _StaffHomeState extends State<StaffHome> {
           if (unknown) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Wi-Fi ka naam nahi mil raha.', style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
             if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
-            TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings kholo')),
+            Row(children: [
+              TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
+              TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
+            ]),
           ])),
           const Padding(padding: EdgeInsets.all(16), child: Text('Branch visit tracking automatic on hai. Jis branch ke Wi-Fi se connect hoge, wo khud save hoga, app band ho tab bhi.', style: TextStyle(color: Colors.grey))),
         ] else ...[
           if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
-          FilledButton(onPressed: starting ? null : _ensureTracking, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
+          FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
         ],
         const SizedBox(height: 20),
         const Text('Meri recent branch visits', style: TextStyle(fontWeight: FontWeight.w600)),
