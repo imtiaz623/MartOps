@@ -18,7 +18,8 @@ class _StaffHomeState extends State<StaffHome> {
   Map? me;
   List visits = [];
   bool running = false, unknown = false, starting = false;
-  String err = '', ssid = '', permMsg = '', cur = '';
+  String err = '', ssid = '', permMsg = '', cur = '', hint = '';
+  bool diagBusy = false;
 
   @override
   void initState() {
@@ -31,7 +32,28 @@ class _StaffHomeState extends State<StaffHome> {
   void dispose() { FlutterForegroundTask.removeTaskDataCallback(_onData); super.dispose(); }
 
   void _onData(Object d) {
-    if (d is Map && mounted) setState(() { cur = '${d['cur'] ?? ''}'; unknown = d['unknown'] == true; ssid = '${d['ssid'] ?? ''}'; });
+    if (d is Map && mounted) {
+      setState(() { cur = '${d['cur'] ?? ''}'; unknown = d['unknown'] == true; ssid = '${d['ssid'] ?? ''}'; });
+      if (unknown) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
+    }
+  }
+
+  /// Tells the manager exactly why the Wi-Fi name can't be read.
+  Future<void> _diagnose() async {
+    if (diagBusy) return;
+    diagBusy = true;
+    final perm = await Permission.locationWhenInUse.status.isGranted;
+    final gps = await Permission.locationWhenInUse.serviceStatus.isEnabled;
+    final always = await Permission.locationAlways.status.isGranted;
+    diagBusy = false;
+    if (!mounted) return;
+    setState(() => hint = !perm
+        ? 'Location permission band hai. Neeche button se App settings kholo > Permissions > Location > "Allow all the time" aur "Use precise location" on karo.'
+        : !gps
+            ? 'Phone ki Location (GPS) band hai. Screen ke upar se neeche kheench kar Location on karo. Bina Location ke Android Wi-Fi ka naam nahi dikhata.'
+            : !always
+                ? 'Location "Allow all the time" aur "Use precise location" karo (App settings > Permissions > Location).'
+                : 'Phone Wi-Fi se connected hona chahiye. Connected ho to Location precise on hai ya nahi check karo.');
   }
 
   Future<void> _load() async {
@@ -90,7 +112,11 @@ class _StaffHomeState extends State<StaffHome> {
             leading: Icon(Icons.circle, color: here.isNotEmpty ? Colors.green : Colors.orange),
             title: Text(here.isNotEmpty ? 'Abhi: $here' : 'Kisi branch ke Wi-Fi se connected nahi'),
             subtitle: ssid.isNotEmpty && !unknown ? Text('Wi-Fi: $ssid') : null),
-          if (unknown) const Padding(padding: EdgeInsets.symmetric(horizontal: 16), child: Text('Wi-Fi ka naam nahi mil raha. Phone ki Location (GPS) on karo aur Wi-Fi se connect raho.', style: TextStyle(color: Colors.orangeAccent))),
+          if (unknown) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Wi-Fi ka naam nahi mil raha.', style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
+            if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
+            TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings kholo')),
+          ])),
           const Padding(padding: EdgeInsets.all(16), child: Text('Branch visit tracking automatic on hai. Jis branch ke Wi-Fi se connect hoge, wo khud save hoga, app band ho tab bhi.', style: TextStyle(color: Colors.grey))),
         ] else ...[
           if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
