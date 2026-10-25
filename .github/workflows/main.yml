@@ -78,11 +78,12 @@ jobs:
           bg=Image.new('RGBA',(S,S),(24,21,40,255))
           bg.alpha_composite(mark(S,1.0)); bg.save('icon.png')
           mark(S,0.8).save('icon_fg.png')
+          import os
+          for d,px in (('mdpi',48),('hdpi',72),('xhdpi',96),('xxhdpi',144),('xxxhdpi',192)):
+              os.makedirs('android/app/src/main/res/mipmap-'+d, exist_ok=True)
+              bg.resize((px,px),Image.LANCZOS).convert('RGB').save('android/app/src/main/res/mipmap-'+d+'/ic_launcher.png')
           PY
       - run: flutter pub get
-      - name: App icon
-        continue-on-error: true
-        run: dart run flutter_launcher_icons
       - run: flutter build apk --release
 
       - uses: actions/upload-artifact@v4
