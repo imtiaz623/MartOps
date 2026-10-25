@@ -1,7 +1,7 @@
 name: Build APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # Actions tab > Build APK > Run workflow
   push:
     branches: [main]
 
@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Show repo files
-        run: ls -la && ls -la lib
 
       - uses: actions/setup-java@v4
         with:
@@ -24,43 +21,27 @@ jobs:
           channel: stable
           cache: true
 
+      # The repo has no android/ folder, so generate it, then add our permissions and service.
       - name: Create Android project
         run: |
-          set -e
           flutter create --org com.martops --project-name martops --platforms=android _tmp
-          rm -rf android
           cp -r _tmp/android ./android
           rm -rf _tmp
-          ls android/app/src/main
-
-      - name: Patch manifest and minSdk
-        run: |
-          set -e
           python3 - <<'PY'
+          import re
           p = "android/app/src/main/AndroidManifest.xml"
           m = open(p).read()
-          perms = """    <uses-permission android:name="android.permission.INTERNET"/>
-              <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-              <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-              <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-              <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
-              <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
-              <uses-permission android:name="android.permission.WAKE_LOCK"/>
-          """
-          svc = '    <service android:name="com.pravera.flutter_foreground_task.service.ForegroundService" android:foregroundServiceType="location" android:exported="false"/>\n'
-          if "<application" not in m or "</application>" not in m:
-              raise SystemExit("manifest format not as expected")
-          m = m.replace("<application", perms + "    <application", 1)
-          m = m.replace("</application>", svc + "    </application>", 1)
+          add = open("AndroidManifest_additions.xml").read()
+          perms = "\n".join(l for l in add.splitlines() if l.startswith("<uses-permission"))
+          svc = '<service android:name="com.pravera.flutter_foreground_task.service.ForegroundService" android:foregroundServiceType="location" android:exported="false"/>'
+          m = m.replace("<application", perms + "\n    <application", 1)
+          m = m.replace("</application>", "    " + svc + "\n    </application>", 1)
           open(p, "w").write(m)
-          print(m)
           PY
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/; s/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle.kts android/app/build.gradle 2>/dev/null || true
-          grep -n "minSdk" android/app/build.gradle* || true
+          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/; s/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle*
+          sed -i 's/android:label="[^"]*"/android:label="MartOps"/' android/app/src/main/AndroidManifest.xml
 
+      # Optional: add repo secret API_URL (Settings > Secrets and variables > Actions) instead of editing api.dart.
       - name: Set API URL
         env:
           API_URL: ${{ secrets.API_URL }}
@@ -68,11 +49,40 @@ jobs:
           if [ -n "$API_URL" ]; then sed -i "s|PASTE_APPS_SCRIPT_EXEC_URL|$API_URL|" lib/api.dart; fi
           grep -n "kApiUrl =" lib/api.dart
 
-      - name: Check pubspec
+      - name: Generate app icon
+        continue-on-error: true
         run: |
-          test -f pubspec.yaml || (echo "pubspec.yaml root mein nahi hai" && exit 1)
-
+          python3 -m pip install --break-system-packages pillow || python3 -m pip install pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw
+          import math
+          GOLD=(242,184,75,255); DARK=(21,19,26,255)
+          def mark(S, scale=1.0):
+              K=4; N=S*K
+              im=Image.new('RGBA',(N,N),(0,0,0,0)); d=ImageDraw.Draw(im)
+              cx=N/2; R=N*0.25*scale; cy=N*0.5-0.525*R
+              d.polygon([(cx-R*0.88,cy+R*0.48),(cx+R*0.88,cy+R*0.48),(cx,cy+R*2.05)],fill=GOLD)
+              d.ellipse((cx-R,cy-R,cx+R,cy+R),fill=GOLD)
+              ri=R*0.66
+              d.ellipse((cx-ri,cy-ri,cx+ri,cy+ri),fill=DARK)
+              ox,oy=cx,cy+ri*0.36
+              d.ellipse((ox-ri*0.1,oy-ri*0.1,ox+ri*0.1,oy+ri*0.1),fill=GOLD)
+              for rad in (0.38,0.66,0.94):
+                  r=ri*rad; w=int(ri*0.115)
+                  d.arc((ox-r,oy-r,ox+r,oy+r),start=228,end=312,fill=GOLD,width=w)
+                  for ang in (228,312):
+                      x=ox+r*math.cos(math.radians(ang)); y=oy+r*math.sin(math.radians(ang))
+                      d.ellipse((x-w/2,y-w/2,x+w/2,y+w/2),fill=GOLD)
+              return im.resize((S,S),Image.LANCZOS)
+          S=1024
+          bg=Image.new('RGBA',(S,S),(24,21,40,255))
+          bg.alpha_composite(mark(S,1.0)); bg.save('icon.png')
+          mark(S,0.8).save('icon_fg.png')
+          PY
       - run: flutter pub get
+      - name: App icon
+        continue-on-error: true
+        run: dart run flutter_launcher_icons
       - run: flutter build apk --release
 
       - uses: actions/upload-artifact@v4
