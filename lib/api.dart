@@ -32,6 +32,30 @@ String fmtT(dynamic ms) {
   return '${z(d.day)}/${z(d.month)} ${z(d.hour)}:${z(d.minute)}';
 }
 
+String stLabel(dynamic state, {String branch = '', String detail = ''}) {
+  switch ('$state') {
+    case 'BRANCH':
+    case 'CONNECTED':
+      return branch.isEmpty ? 'Branch par' : 'Branch par: $branch';
+    case 'OTHER':
+      return 'Dusre Wi-Fi par${detail.isEmpty ? '' : ' ($detail)'}';
+    case 'MOBILE':
+      return 'Mobile data par (Wi-Fi off / disconnected)';
+    case 'NONET':
+      return 'Internet band (Wi-Fi aur data off)';
+    case 'LOCOFF':
+      return 'Wi-Fi connected, naam nahi mil raha (Location off)';
+    case 'OFF':
+      return 'Phone band / app band';
+    case 'NO_SIGNAL':
+      return 'Koi signal nahi (phone off / internet band / app band)';
+    case 'NO_DATA':
+      return 'Tracking shuru nahi hui';
+    default:
+      return '$state';
+  }
+}
+
 class Session {
   static String? token, role, name, userId, companyName, companyCode;
 
@@ -53,7 +77,7 @@ class Session {
 
   static Future<void> clear() async {
     final p = await SharedPreferences.getInstance();
-    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue');
+    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue'); await p.remove('tick');
     token = null; role = null;
   }
 
