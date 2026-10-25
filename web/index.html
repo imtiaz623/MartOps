@@ -27,6 +27,7 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 #m{position:fixed;inset:0;background:#000c;display:none;place-items:center;padding:16px;z-index:20}#m.on{display:grid}
 #m>div{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:20px;max-width:440px;width:100%}
 .r{display:flex;gap:6px;margin-bottom:6px}.r input{flex:1}.wl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 8px;margin:6px 0}
+.ft{text-align:center;color:var(--mu);font-size:13px;padding:22px 12px}.ft a{color:inherit}
 .err{color:var(--bd);min-height:1.4em;margin:6px 0 0}.hide{display:none!important}
 </style></head><body>
 <div id="auth"><section><h1 id="at">MartOps</h1><p id="ai" style="color:var(--mu)"></p>
@@ -38,16 +39,22 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <div id="app" class="hide"><header><h1 id="cn">MartOps</h1>
 <button id="th">Theme</button><button id="lo">Log out</button></header>
 <main><div class="bar"><span id="sub"></span><span style="flex:1"></span><span id="ref" style="color:var(--mu);font-size:13px"></span><button class="p" id="pay">Pay / renew</button></div>
-<div class="tabs" id="tabs"><button data-t="ov" class="on">Overview</button><button data-t="bn">Branches and Wi-Fi</button><button data-t="tm">Managers</button><button data-t="st">Settings</button></div>
+<div class="tabs" id="tabs"><button data-t="ov" class="on">Overview</button><button data-t="bn">Branches and Wi-Fi</button><button data-t="rx">Reports</button><button data-t="tm">Managers</button><button data-t="st">Settings</button></div>
 <div id="t-ov"><div class="grid" id="kp"></div>
-<section style="margin-top:16px"><h2>Managers right now</h2><div class="sc"><table><thead><tr><th>Manager</th><th>Current branch</th><th>Since</th><th>Status</th></tr></thead><tbody id="sr"></tbody></table></div></section>
-<section style="margin-top:16px"><h2>Branch visit log</h2><div class="sc"><table><thead><tr><th>Manager</th><th>Branch</th><th>Location</th><th>Arrived</th><th>Left</th><th>Min</th></tr></thead><tbody id="lg"></tbody></table></div></section>
+<section style="margin-top:16px"><h2>Managers right now</h2><div class="sc"><table><thead><tr><th>Name</th><th>Branch</th><th>Since</th><th>Status</th></tr></thead><tbody id="sr"></tbody></table></div></section>
+<section style="margin-top:16px"><h2>Activity log</h2><div class="sc"><table><thead><tr><th>Name</th><th>Branch</th><th>Status</th><th>Connect time</th><th>Out-of-range time</th><th>Time diff</th></tr></thead><tbody id="lg"></tbody></table></div></section>
 <section style="margin-top:16px"><h2>Today's visit report</h2><pre id="rpt">Loading...</pre></section></div>
 <div id="t-bn" class="hide"><section><div class="sc"><table><thead><tr><th>Branch</th><th>Location</th><th>Wi-Fi names</th><th></th></tr></thead><tbody id="bl2"></tbody></table></div>
 <h2 style="margin-top:14px" id="bh">Add a branch</h2><div class="f"><input id="nn" placeholder="Branch name"><input id="nc" placeholder="Location name (city / area)"></div>
 <div class="wl" id="wl"></div><div class="bar" style="border:0;padding:0;margin-top:6px"><button id="wa" type="button">+ Add another Wi-Fi</button><button class="p" id="sb">Save branch</button><button id="cx" class="hide" type="button">Cancel edit</button></div>
 <p style="color:var(--mu);font-size:13px">Is branch ke jitne bhi Wi-Fi hain sab add karo. Manager inme se jis se bhi connect hoga, us branch ki visit save hogi.</p>
 <p class="err" id="be"></p></section></div>
+<div id="t-rx" class="hide"><section>
+<div class="bar"><label>From <input type="date" id="rf"></label><label>To <input type="date" id="rt"></label><select id="rm"><option value="">All managers</option></select><select id="rb"><option value="">All branches</option></select><select id="rkd"><option value="">All status</option><option value="branch">At branch only</option><option value="other">Not at branch only</option></select><button class="p" id="rsh">Show report</button></div>
+<div class="bar" style="margin-top:8px"><button data-rg="today">Today</button><button data-rg="yest">Yesterday</button><button data-rg="w">Last 7 days</button><button data-rg="m">This month</button></div>
+<p class="err" id="re"></p><div class="grid" id="rk" style="margin-top:12px"></div>
+<div class="bar hide" id="rd" style="margin-top:12px"><b>Download:</b><button id="dx">Excel (.xlsx)</button><button id="dp">PDF</button><button id="dt">Text (.txt)</button><button id="di">Image (.png)</button></div>
+<div class="sc" id="rr" style="margin-top:12px"></div></section></div>
 <div id="t-tm" class="hide"><section><div class="sc"><table><thead><tr><th>ID</th><th>Name</th><th>Phone</th><th></th></tr></thead><tbody id="cp"></tbody></table></div>
 <h2 style="margin-top:14px">Add a manager</h2><div class="f"><input id="cm" placeholder="Manager name"><input id="cph" placeholder="Phone (optional)"><button class="p" id="ca">Create manager</button></div>
 <p id="cr" style="color:var(--ok)"></p><p class="err" id="ce"></p></section></div>
@@ -59,6 +66,7 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <p>Send PKR 3,000 (monthly) or PKR 30,000 (yearly, you save PKR 6,000) to Easypaisa 03708431602, then enter the transaction ID. Access returns after verification.</p>
 <div class="f" style="grid-template-columns:1fr"><select id="pl"><option value="MONTHLY">Monthly - PKR 3,000</option><option value="YEARLY">Yearly - PKR 30,000</option></select><input id="tid" placeholder="Transaction ID (TID)"><button class="p" id="sd">Submit for verification</button><button id="cl">Close</button></div><p id="ms" style="color:var(--mu)"></p></div></div>
 
+<footer class="ft">Help line: <a href="tel:03069348405">0306 9348405</a> &middot; <a href="privacy.html">Privacy Policy</a> &middot; <a href="delete-account.html">Delete account</a> &middot; Imtiaz Ali Qumbrani</footer>
 <script>
 // 1) Deploy Code.gs as a Web App and paste its /exec URL here. 2) Host this file on Vercel as index.html.
 const API="PASTE_APPS_SCRIPT_EXEC_URL";
@@ -87,18 +95,21 @@ function subBar(){const s=D.sub,d=s.trialEnd?Math.max(0,Math.ceil((s.trialEnd-Da
 $("sub").innerHTML=s.status==="ACTIVE"?`<span class="b ok">Active</span> ${d} days left`:`<span class="b wa">Trial</span> ${d} days left`}
 function lock(st){const M={PENDING:"Payment verification pending",REJECTED:"Payment rejected - send the correct TID",EXPIRED:"Plan expired - renew"};$("sub").innerHTML='<span class="b bd">Locked</span> '+(M[st]||"Payment needed");$("m").classList.add("on");$("cl").classList.add("hide")}
 const bn=id=>{const b=D.branches.find(x=>x.id==id);return b?b.name:""};
-const badge=s=>({CONNECTED:'<span class="b ok">At branch</span>',OUT:'<span class="b wa">Between branches</span>',NO_SIGNAL:'<span class="b wa">No signal</span>',NO_DATA:'<span class="b">Not started</span>'}[s.status]||"");
-function draw(){const ms=D.users.filter(u=>u.role==="staff"),d0=new Date().setHours(0,0,0,0),vt=D.visits.filter(v=>Number(v.arrived)>=d0);
-$("kp").innerHTML=[[ms.length,"Managers"],[ms.filter(m=>m.status==="CONNECTED").length,"At a branch now"],[vt.length,"Visits today"],[new Set(vt.map(v=>v.branch)).size,"Branches visited today"],[D.branches.length,"Branches"]].map(k=>`<div class="k"><b>${k[0]}</b><span>${k[1]}</span></div>`).join("");
-$("sr").innerHTML=ms.map(m=>`<tr><td>${E(m.name)}</td><td>${E(m.status==="OUT"?"":bn(m.branch))}</td><td>${m.since&&m.status!=="OUT"?T(m.since):""}</td><td>${badge(m)}</td></tr>`).join("")||'<tr><td colspan=4>No managers yet. Add one in the Managers tab.</td></tr>';
-$("lg").innerHTML=D.visits.map(v=>`<tr><td>${E(v.manager)}</td><td>${E(v.branchName)}</td><td>${E(v.city)}</td><td>${T(v.arrived)}</td><td>${v.left?T(v.left):'<span class="b ok">Here now</span>'}</td><td>${E(v.minutes)}</td></tr>`).join("")||'<tr><td colspan=6>No branch visits yet.</td></tr>';
+const SL={BRANCH:"At branch",OTHER:"Other Wi-Fi",MOBILE:"Mobile data (Wi-Fi off / disconnected)",NONET:"No internet (Wi-Fi and data off)",LOCOFF:"Location off (Wi-Fi name unreadable)",OFF:"Phone off / app stopped"};
+const slabel=v=>(SL[v.state]||v.state)+(v.state==="OTHER"&&v.detail?": "+v.detail:"");
+const badge=m=>{const x={CONNECTED:["ok","At branch"],OTHER:["wa","Other Wi-Fi"+(m.detail?": "+m.detail:"")],MOBILE:["wa","Mobile data (Wi-Fi off / disconnected)"],NONET:["bd","No internet (Wi-Fi and data off)"],LOCOFF:["wa","Location off"],NO_SIGNAL:["bd","No signal: phone off / no internet / app stopped"],NO_DATA:["","Not started"]}[m.status];return x?`<span class="b ${x[0]}">${E(x[1])}</span>`:""};
+const NOTB=["OTHER","MOBILE","NONET","LOCOFF"];
+function draw(){const ms=D.users.filter(u=>u.role==="staff"),d0=new Date().setHours(0,0,0,0),vt=D.visits.filter(v=>Number(v.arrived)>=d0&&v.state==="BRANCH");
+$("kp").innerHTML=[[ms.length,"Managers"],[ms.filter(m=>m.status==="CONNECTED").length,"At a branch now"],[ms.filter(m=>NOTB.includes(m.status)).length,"Not at a branch"],[ms.filter(m=>m.status==="NO_SIGNAL").length,"No signal"],[vt.length,"Branch visits today"]].map(k=>`<div class="k"><b>${k[0]}</b><span>${k[1]}</span></div>`).join("");
+$("sr").innerHTML=ms.map(m=>`<tr><td>${E(m.name)}</td><td>${E(m.status==="CONNECTED"?bn(m.branch):"")}</td><td>${m.status==="NO_SIGNAL"?"last seen "+T(m.lastSeen):m.since?T(m.since):""}</td><td>${badge(m)}</td></tr>`).join("")||'<tr><td colspan=4>No managers yet. Add one in the Managers tab.</td></tr>';
+$("lg").innerHTML=D.visits.map(v=>`<tr><td>${E(v.manager)}</td><td>${E(v.branchName)}${v.city?" ("+E(v.city)+")":""}</td><td>${E(slabel(v))}</td><td>${T(v.arrived)}</td><td>${v.left?T(v.left):'<span class="b ok">Now</span>'}</td><td>${v.left?hm(Number(v.minutes)||0):"running"}</td></tr>`).join("")||'<tr><td colspan=6>No activity yet.</td></tr>';
 $("bl2").innerHTML=D.branches.map(b=>`<tr><td>${E(b.name)}</td><td>${E(b.city)}</td><td>${b.wifi.map(w=>`<span class="b ok">${E(w)}</span>`).join(" ")}</td><td><button data-e="${E(b.id)}">Edit</button> <button class="x" data-d="${E(b.id)}">Remove</button></td></tr>`).join("")||'<tr><td colspan=4>Add your first branch.</td></tr>';
 $("cp").innerHTML=D.users.filter(u=>u.role==="staff").map(u=>`<tr><td>${E(u.userId)}</td><td>${E(u.name)}</td><td>${E(u.phone)}</td><td><button data-r="${E(u.userId)}">Reset PIN</button> <button class="x" data-x="${E(u.userId)}">Remove</button></td></tr>`).join("")||'<tr><td colspan=4>No managers yet.</td></tr>';
-$("ref").textContent="Updated "+new Date().toLocaleTimeString()}
+fillRp();$("ref").textContent="Updated "+new Date().toLocaleTimeString()}
 async function loadReport(){const r=await api("report");$("rpt").textContent=r.ok?r.text:"Unavailable"}
 async function refresh(){const r=await api("dashboard");if(r.ok){D=r;draw();subBar()}else if(r.error==="subscription_inactive")lock(r.status)}
 setInterval(()=>{if(D&&!document.hidden)refresh()},30000);
-$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;[...$("tabs").children].forEach(b=>b.classList.toggle("on",b===e.target));["ov","bn","tm","st"].forEach(k=>$("t-"+k).classList.toggle("hide",k!==t))};
+$("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;[...$("tabs").children].forEach(b=>b.classList.toggle("on",b===e.target));["ov","bn","rx","tm","st"].forEach(k=>$("t-"+k).classList.toggle("hide",k!==t));if(t==="rx"&&!RP)rangeBtn("today")};
 $("th").onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme=="light"?"dark":"light"};
 // ---- branches ----
 const wrow=v=>`<div class="r"><input class="wi" placeholder="Wi-Fi name" value="${E(v)}"><button class="x" data-rm="1" type="button" aria-label="Remove Wi-Fi">x</button></div>`;
@@ -122,4 +133,124 @@ $("pay").onclick=()=>{$("m").classList.add("on")};$("cl").onclick=()=>$("m").cla
 $("sd").onclick=async()=>{const t=$("tid").value.trim();if(!t)return $("ms").textContent="Enter the transaction ID.";
 const r=await api("pay",{plan:$("pl").value,tid:t});$("ms").textContent=r.ok?"Sent. Access returns when your payment is verified; this page checks every minute.":r.error;
 if(r.ok)setInterval(async()=>{const b=await api("dashboard");if(b.ok)location.reload()},60000)};
+// ---- reports (Excel / PDF / Text / Image) ----
+const pad=n=>String(n).padStart(2,"0"),MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const dstr=ms=>{const d=new Date(Number(ms));return pad(d.getDate())+"-"+MON[d.getMonth()]+"-"+d.getFullYear()};
+const tstr=ms=>{const d=new Date(Number(ms));return pad(d.getHours())+":"+pad(d.getMinutes())};
+const hm=m=>Math.floor(m/60)+"h "+pad(m%60)+"m";
+const ymd=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+let RP=null;
+function fillRp(){const sig=JSON.stringify([D.users.map(u=>u.userId+u.name),D.branches.map(b=>b.id+b.name)]);if(fillRp.sig===sig)return;fillRp.sig=sig;
+const m=$("rm"),b=$("rb"),mv=m.value,bv=b.value;
+m.innerHTML='<option value="">All managers</option>'+D.users.filter(u=>u.role==="staff").map(u=>`<option value="${E(u.userId)}">${E(u.name)}</option>`).join("");
+b.innerHTML='<option value="">All branches</option>'+D.branches.map(x=>`<option value="${E(x.id)}">${E(x.name)}${x.city?" ("+E(x.city)+")":""}</option>`).join("");
+m.value=mv;b.value=bv}
+function rangeBtn(k){const n=new Date(),t=new Date(n.getFullYear(),n.getMonth(),n.getDate());let a=t;
+if(k==="yest"){a=new Date(t);a.setDate(a.getDate()-1);$("rf").value=ymd(a);$("rt").value=ymd(a)}
+else if(k==="w"){a=new Date(t);a.setDate(a.getDate()-6);$("rf").value=ymd(a);$("rt").value=ymd(t)}
+else if(k==="m"){$("rf").value=ymd(new Date(t.getFullYear(),t.getMonth(),1));$("rt").value=ymd(t)}
+else{$("rf").value=ymd(t);$("rt").value=ymd(t)}
+runReport()}
+async function runReport(){const f=$("rf").value,t=$("rt").value;$("re").textContent="";
+if(!f||!t)return $("re").textContent="Dono dates chuno.";
+const from=new Date(f+"T00:00:00").getTime(),to=new Date(t+"T00:00:00").getTime()+864e5;
+if(to<=from)return $("re").textContent="To date, From date se pehle nahi ho sakti.";
+$("rr").textContent="Loading...";
+const r=await api("visitReport",{from,to,manager:$("rm").value,branch:$("rb").value,kind:$("rkd").value});
+if(!r.ok){$("rr").textContent="";return $("re").textContent=r.error}
+RP=buildReport(r.rows,f,t,r.truncated);paintReport()}
+function buildReport(rows,f,t,trunc){
+const head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Time diff","Minutes"];
+const lab=v=>(SL[v.state]||v.state)+(v.state==="OTHER"&&v.detail?": "+v.detail:"");
+const body=rows.map(v=>[dstr(v.arrived),v.manager,(v.branchName||"")+(v.city?" ("+v.city+")":""),lab(v),tstr(v.arrived),v.left?(dstr(v.left)===dstr(v.arrived)?tstr(v.left):dstr(v.left)+" "+tstr(v.left)):"Now",hm(Number(v.minutes)||0),Number(v.minutes)||0]);
+const g={};let bmin=0,omin=0;
+rows.forEach(v=>{const m=Number(v.minutes)||0,isB=v.state==="BRANCH";if(isB)bmin+=m;else omin+=m;
+const k=v.manager+"|"+(isB?v.branch:"")+"|"+v.state;const o=g[k]||(g[k]={m:v.manager,b:isB?(v.branchName||"")+(v.city?" ("+v.city+")":""):"-",s:SL[v.state]||v.state,n:0,min:0});o.n++;o.min+=m});
+const sum=Object.values(g).sort((a,b)=>a.m.localeCompare(b.m)||(a.b==="-")-(b.b==="-")||b.min-a.min).map(x=>[x.m,x.b,x.s,x.n,hm(x.min),x.min]);
+const sel=id=>$(id).selectedOptions[0]?$(id).selectedOptions[0].text:"All";
+return{head,body,sum,sumHead:["Name","Branch","Status","Count","Time diff","Minutes"],bmin,omin,total:bmin+omin,visits:rows.filter(v=>v.state==="BRANCH").length,
+mgrs:new Set(rows.map(v=>v.manager)).size,brs:new Set(rows.filter(v=>v.state==="BRANCH").map(v=>v.branch)).size,from:f,to:t,trunc,
+title:(D.company.name||"MartOps")+" - Manager Activity Report",sub:"Period: "+f+" to "+t+"  |  "+sel("rm")+"  |  "+sel("rb")+"  |  "+sel("rkd"),
+gen:"Generated "+dstr(Date.now())+" "+tstr(Date.now())+"  |  MartOps"}}
+function paintReport(){const r=RP,th=a=>"<tr>"+a.map(h=>`<th>${E(h)}</th>`).join("")+"</tr>",td=a=>"<tr>"+a.map(c=>`<td>${E(c)}</td>`).join("")+"</tr>";
+$("rk").innerHTML=[[r.visits,"Branch visits"],[hm(r.bmin),"Time at branches"],[hm(r.omin),"Time not at branch"],[r.mgrs,"Managers"]].map(k=>`<div class="k"><b>${E(k[0])}</b><span>${k[1]}</span></div>`).join("");
+$("rr").innerHTML=`<table><thead>${th(r.head)}</thead><tbody>${r.body.map(td).join("")||'<tr><td colspan="8">No activity in this period.</td></tr>'}</tbody></table>`+
+(r.sum.length?`<h2 style="margin-top:14px">Summary</h2><table><thead>${th(r.sumHead)}</thead><tbody>${r.sum.map(td).join("")}</tbody></table>`:"")+
+(r.trunc?'<p class="err">Only the first 5000 visits are shown. Choose a shorter period.</p>':"");
+$("rd").classList.toggle("hide",!r.body.length)}
+// ---- downloads ----
+const fname=ext=>(D.company.name||"MartOps").replace(/[^\w]+/g,"_")+"_Activity_"+RP.from+"_to_"+RP.to+"."+ext;
+function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
+function toText(r){const tbl=(h,rows)=>{const all=[h,...rows].map(x=>x.map(String)),w=h.map((_,i)=>Math.max(...all.map(x=>x[i].length)));return all.map(x=>x.map((c,i)=>c.padEnd(w[i])).join("  ")).join("\n")};
+return [r.title,r.sub,r.gen,"","Branch visits: "+r.visits+"   Time at branches: "+hm(r.bmin)+"   Time not at branch: "+hm(r.omin),"",tbl(r.head,r.body),"","SUMMARY",tbl(r.sumHead,r.sum)].join("\n")}
+const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
+function zipFiles(files,type){const enc=new TextEncoder(),parts=[],cen=[],u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];let off=0;
+files.forEach(f=>{const nm=enc.encode(f.name),d=enc.encode(f.data),crc=crc32(d),sz=d.length;
+const lh=new Uint8Array([0x50,0x4b,3,4,...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+parts.push(lh,nm,d);
+cen.push(new Uint8Array([0x50,0x4b,1,2,...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0x21),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+off+=lh.length+nm.length+sz});
+const cl=cen.reduce((a,c)=>a+c.length,0);
+return new Blob([...parts,...cen,new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cl),...u32(off),...u16(0)])],{type})}
+const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,"");
+const colL=i=>{let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
+function sheetXml(rows,bold,widths){const R=rows.map((row,ri)=>`<row r="${ri+1}">`+row.map((v,ci)=>{const ref=colL(ci)+(ri+1),st=bold.includes(ri)?' s="1"':"";
+return typeof v==="number"?`<c r="${ref}"${st}><v>${v}</v></c>`:`<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`}).join("")+"</row>").join("");
+return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")+"</cols><sheetData>"+R+"</sheetData></worksheet>"}
+function toXlsx(r){const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+const s1=[[r.title],[r.sub],[r.gen],[],r.head,...r.body],s2=[r.sumHead,...r.sum];
+const files=[
+{name:"[Content_Types].xml",data:H+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
+{name:"_rels/.rels",data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
+{name:"xl/workbook.xml",data:H+`<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Visits" sheetId="1" r:id="rId1"/><sheet name="Summary" sheetId="2" r:id="rId2"/></sheets></workbook>`},
+{name:"xl/_rels/workbook.xml.rels",data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
+{name:"xl/styles.xml",data:H+`<styleSheet ${NS}><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2B84B"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+{name:"xl/worksheets/sheet1.xml",data:sheetXml(s1,[4],[13,18,26,38,13,18,11,9])},
+{name:"xl/worksheets/sheet2.xml",data:sheetXml(s2,[0],[18,26,38,8,12,9])}];
+return zipFiles(files,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
+function renderPages(r){const W=1684,H=1190,M=44,RH=40,FF='"Segoe UI",Arial,"Noto Naskh Arabic","Noto Nastaliq Urdu",sans-serif',pages=[];let x,y;
+const newPage=()=>{const cv=document.createElement("canvas");cv.width=W;cv.height=H;x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,W,H);x.textBaseline="middle";pages.push(cv);y=M};
+const fit=(t,w)=>{t=String(t);if(x.measureText(t).width<=w)return t;while(t.length>1&&x.measureText(t+"…").width>w)t=t.slice(0,-1);return t+"…"};
+const table=(h,rows,ws,al)=>{const tw=ws.reduce((a,b)=>a+b,0),cell=(c,i,cx)=>{x.textAlign=al[i]==="r"?"right":"left";x.fillText(fit(c,ws[i]-20),al[i]==="r"?cx+ws[i]-10:cx+10,y+RH/2)};
+const head=()=>{x.fillStyle="#f2b84b";x.fillRect(M,y,tw,RH);x.fillStyle="#1a1405";x.font="bold 20px "+FF;let cx=M;h.forEach((c,i)=>{cell(c,i,cx);cx+=ws[i]});y+=RH};
+if(y+RH*3>H-M-30)newPage();head();
+rows.forEach((row,ri)=>{if(y+RH>H-M-30){newPage();head()}
+if(ri%2){x.fillStyle="#f6f6f8";x.fillRect(M,y,tw,RH)}
+x.fillStyle="#222";x.font="20px "+FF;let cx=M;row.forEach((c,i)=>{cell(c,i,cx);cx+=ws[i]});
+x.strokeStyle="#e3e3e8";x.beginPath();x.moveTo(M,y+RH);x.lineTo(M+tw,y+RH);x.stroke();y+=RH});y+=22};
+newPage();x.textAlign="left";x.fillStyle="#111";x.font="bold 34px "+FF;x.fillText(fit(r.title,W-2*M),M,y+20);y+=50;
+x.font="22px "+FF;x.fillStyle="#444";x.fillText(fit(r.sub,W-2*M),M,y+10);y+=34;
+x.font="18px "+FF;x.fillStyle="#777";x.fillText(r.gen,M,y+8);y+=36;
+x.fillStyle="#111";x.font="bold 24px "+FF;x.fillText("Branch visits: "+r.visits+"     Time at branches: "+hm(r.bmin)+"     Time not at branch: "+hm(r.omin)+"     Managers: "+r.mgrs,M,y+10);y+=46;
+table(r.head,r.body,[140,200,300,420,130,190,120,96],["l","l","l","l","l","l","r","r"]);
+if(r.sum.length){if(y+RH*4>H-M-30)newPage();x.textAlign="left";x.fillStyle="#111";x.font="bold 26px "+FF;x.fillText("Summary",M,y+16);y+=42;
+table(r.sumHead,r.sum,[260,330,420,120,200,120],["l","l","l","r","r","r"])}
+pages.forEach((p,i)=>{const c=p.getContext("2d");c.font="16px "+FF;c.fillStyle="#999";c.textAlign="right";c.textBaseline="middle";c.fillText("Page "+(i+1)+" of "+pages.length+"  |  MartOps",W-M,H-24)});
+return pages}
+function toPdf(pages){const enc=new TextEncoder(),chunks=[],offs=[];let len=0;
+const put=v=>{const b=typeof v==="string"?enc.encode(v):v;chunks.push(b);len+=b.length};
+const obj=(n,f)=>{offs[n]=len;put(n+" 0 obj\n");f();put("\nendobj\n")};
+const jp=pages.map(p=>{const b=atob(p.toDataURL("image/jpeg",0.92).split(",")[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return{d:u,w:p.width,h:p.height}});
+put("%PDF-1.4\n");obj(1,()=>put("<</Type/Catalog/Pages 2 0 R>>"));
+obj(2,()=>put("<</Type/Pages/Count "+jp.length+"/Kids["+jp.map((_,i)=>(3+3*i)+" 0 R").join(" ")+"]>>"));
+jp.forEach((j,i)=>{const p=3+3*i,c=p+1,m=p+2,cs="q 842 0 0 595 0 0 cm /Im0 Do Q";
+obj(p,()=>put("<</Type/Page/Parent 2 0 R/MediaBox[0 0 842 595]/Resources<</XObject<</Im0 "+m+" 0 R>>>>/Contents "+c+" 0 R>>"));
+obj(c,()=>put("<</Length "+cs.length+">>\nstream\n"+cs+"\nendstream"));
+obj(m,()=>{put("<</Type/XObject/Subtype/Image/Width "+j.w+"/Height "+j.h+"/ColorSpace/DeviceRGB/BitsPerComponent 8/Filter/DCTDecode/Length "+j.d.length+">>\nstream\n");put(j.d);put("\nendstream")})});
+const xr=len,total=3+3*jp.length;put("xref\n0 "+total+"\n0000000000 65535 f \n");
+for(let n=1;n<total;n++)put(String(offs[n]).padStart(10,"0")+" 00000 n \n");
+put("trailer\n<</Size "+total+"/Root 1 0 R>>\nstartxref\n"+xr+"\n%%EOF");
+return new Blob(chunks,{type:"application/pdf"})}
+function dlImage(){const ps=renderPages(RP);
+if(ps.length===1)return ps[0].toBlob(b=>save(b,fname("png")));
+if(ps.length<=10){const t=document.createElement("canvas");t.width=ps[0].width;t.height=ps[0].height*ps.length;const c=t.getContext("2d");ps.forEach((p,i)=>c.drawImage(p,0,i*p.height));return t.toBlob(b=>save(b,fname("png")))}
+ps.forEach((p,i)=>setTimeout(()=>p.toBlob(b=>save(b,fname("png").replace(".png","_p"+(i+1)+".png"))),i*700))}
+$("rsh").onclick=runReport;
+document.querySelectorAll("[data-rg]").forEach(b=>b.onclick=()=>rangeBtn(b.dataset.rg));
+$("dx").onclick=()=>save(toXlsx(RP),fname("xlsx"));
+$("dp").onclick=()=>save(toPdf(renderPages(RP)),fname("pdf"));
+$("dt").onclick=()=>save(new Blob(["\ufeff"+toText(RP)],{type:"text/plain;charset=utf-8"}),fname("txt"));
+$("di").onclick=dlImage;
+
 </script></body></html>
