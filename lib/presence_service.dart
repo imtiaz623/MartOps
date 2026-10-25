@@ -4,7 +4,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 
-const pingEvery = Duration(minutes: 1);    // local Wi-Fi check (free, no server call)
+const pingEvery = Duration(seconds: 15);   // local Wi-Fi check (free, no server call)
 const keepAlive = Duration(minutes: 10);   // server keep-alive while nothing changes (saves Apps Script quota)
 
 @pragma('vm:entry-point')
@@ -28,6 +28,7 @@ class PresenceHandler extends TaskHandler {
   String? cand;
   int candCount = 0;
   int candSince = 0;
+  bool? lastUnknown;
 
   @override
   Future<void> onStart(DateTime ts, TaskStarter s) async { await onRepeatEvent(ts); }
@@ -74,7 +75,11 @@ class PresenceHandler extends TaskHandler {
         await p.setString('queue', '[]'); // only forget events once the server has them
       }
     }
-    FlutterForegroundTask.sendDataToMain({'cur': curNow, 'unknown': unknown, 'ssid': ssid ?? ''});
+    if (lastUnknown != unknown) {
+      lastUnknown = unknown;
+      FlutterForegroundTask.updateService(notificationText: unknown ? 'Wi-Fi ka naam nahi mil raha - Location (GPS) on karo' : 'Wi-Fi check ho raha hai');
+    }
+    FlutterForegroundTask.sendDataToMain({'cur': curNow, 'seen': match, 'unknown': unknown, 'ssid': ssid ?? ''});
   }
 
   @override
