@@ -50,7 +50,7 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <p style="color:var(--mu);font-size:13px">Is branch ke jitne bhi Wi-Fi hain sab add karo. Manager inme se jis se bhi connect hoga, us branch ki visit save hogi.</p>
 <p class="err" id="be"></p></section></div>
 <div id="t-rx" class="hide"><section>
-<div class="bar"><label>From <input type="date" id="rf"></label><label>To <input type="date" id="rt"></label><select id="rm"><option value="">All managers</option></select><select id="rb"><option value="">All branches</option></select><select id="rkd"><option value="">All status</option><option value="branch">At branch only</option><option value="other">Not at branch only</option></select><button class="p" id="rsh">Show report</button></div>
+<div class="bar"><label>From <input type="date" id="rf"></label><label>To <input type="date" id="rt"></label><select id="rm"><option value="">All managers</option></select><select id="rb"><option value="">All branches</option></select><select id="rkd"><option value="abs">Out-of-range report</option><option value="visit">Branch visits</option><option value="all">Full activity</option></select><button class="p" id="rsh">Show report</button></div>
 <div class="bar" style="margin-top:8px"><button data-rg="today">Today</button><button data-rg="yest">Yesterday</button><button data-rg="w">Last 7 days</button><button data-rg="m">This month</button></div>
 <p class="err" id="re"></p><div class="grid" id="rk" style="margin-top:12px"></div>
 <div class="bar hide" id="rd" style="margin-top:12px"><b>Download:</b><button id="dx">Excel (.xlsx)</button><button id="dp">PDF</button><button id="dt">Text (.txt)</button><button id="di">Image (.png)</button></div>
@@ -156,25 +156,44 @@ if(!f||!t)return $("re").textContent="Dono dates chuno.";
 const from=new Date(f+"T00:00:00").getTime(),to=new Date(t+"T00:00:00").getTime()+864e5;
 if(to<=from)return $("re").textContent="To date, From date se pehle nahi ho sakti.";
 $("rr").textContent="Loading...";
-const r=await api("visitReport",{from,to,manager:$("rm").value,branch:$("rb").value,kind:$("rkd").value});
+const r=await api("visitReport",{from,to,manager:$("rm").value,branch:$("rb").value});
 if(!r.ok){$("rr").textContent="";return $("re").textContent=r.error}
-RP=buildReport(r.rows,f,t,r.truncated);paintReport()}
-function buildReport(rows,f,t,trunc){
-const head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Time diff","Minutes"];
+RP=buildReport(r,f,t);paintReport()}
+function buildReport(R,f,t){
+const mode=$("rkd").value||"abs",nb=(b,c)=>(b||"")+(c?" ("+c+")":""),tm=(ms,ref)=>!ms?"-":(dstr(ms)===dstr(ref)?tstr(ms):dstr(ms)+" "+tstr(ms));
+const rows=R.rows,eps=R.episodes||[],sel=id=>$(id).selectedOptions[0]?$(id).selectedOptions[0].text:"All";
+const bRows=rows.filter(v=>v.state==="BRANCH"),bmin=bRows.reduce((a,v)=>a+(Number(v.minutes)||0),0),omin=eps.reduce((a,e)=>a+e.minutes,0);
+const mgrs=new Set(rows.map(v=>v.manager).concat(eps.map(e=>e.manager))).size;
+const r={mode,from:f,to:t,trunc:R.truncated,
+kpis:[["Branch visits",bRows.length],["Time at branches",hm(bmin)],["Out-of-range times",eps.length],["Time out of range",hm(omin)],["Managers",mgrs]],
+title:(D.company.name||"MartOps")+" - "+(mode==="abs"?"Out-of-range Report":mode==="visit"?"Branch Visits Report":"Full Activity Report"),
+sub:"Period: "+f+" to "+t+"  |  "+sel("rm")+"  |  "+sel("rb"),gen:"Generated "+dstr(Date.now())+" "+tstr(Date.now())+"  |  MartOps"};
+if(mode==="abs"){
+r.head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Back at branch","Time diff","Minutes"];
+r.body=eps.map(e=>[dstr(e.left),e.manager,nb(e.branchName,e.city),e.status,tm(e.connect,e.left),tm(e.left,e.left),e.back?tm(e.back,e.left)+(e.backName&&e.backName!==e.branchName?" ("+e.backName+")":""):"Still out",hm(e.minutes)+(e.open?" (running)":""),e.minutes]);
+r.widths=[120,160,240,380,130,130,190,130,90];r.aligns=["l","l","l","l","l","l","l","r","r"];
+const g={};eps.forEach(e=>{const o=g[e.manager]||(g[e.manager]={n:0,t:0,mx:0});o.n++;o.t+=e.minutes;o.mx=Math.max(o.mx,e.minutes)});
+r.sumHead=["Name","Out-of-range times","Total time out","Longest time out","Minutes out"];
+r.sum=Object.keys(g).sort().map(k=>[k,g[k].n,hm(g[k].t),hm(g[k].mx),g[k].t]);r.sumWidths=[300,200,240,240,160];r.sumAligns=["l","r","r","r","r"]}
+else if(mode==="visit"){
+r.head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Time at branch","Minutes"];
+r.body=bRows.map(v=>[dstr(v.arrived),v.manager,nb(v.branchName,v.city),"At branch",tm(v.arrived,v.arrived),v.left?tm(v.left,v.arrived):"Now",hm(Number(v.minutes)||0),Number(v.minutes)||0]);
+r.widths=[130,190,320,180,150,200,160,100];r.aligns=["l","l","l","l","l","l","r","r"];
+const g={};bRows.forEach(v=>{const k=v.manager+"|"+v.branch,o=g[k]||(g[k]={m:v.manager,b:nb(v.branchName,v.city),n:0,t:0});o.n++;o.t+=Number(v.minutes)||0});
+r.sumHead=["Name","Branch","Visits","Time at branch","Minutes"];
+r.sum=Object.values(g).sort((a,b)=>a.m.localeCompare(b.m)||b.t-a.t).map(x=>[x.m,x.b,x.n,hm(x.t),x.t]);r.sumWidths=[300,400,140,220,160];r.sumAligns=["l","l","r","r","r"]}
+else{
 const lab=v=>(SL[v.state]||v.state)+(v.state==="OTHER"&&v.detail?": "+v.detail:"");
-const body=rows.map(v=>[dstr(v.arrived),v.manager,(v.branchName||"")+(v.city?" ("+v.city+")":""),lab(v),tstr(v.arrived),v.left?(dstr(v.left)===dstr(v.arrived)?tstr(v.left):dstr(v.left)+" "+tstr(v.left)):"Now",hm(Number(v.minutes)||0),Number(v.minutes)||0]);
-const g={};let bmin=0,omin=0;
-rows.forEach(v=>{const m=Number(v.minutes)||0,isB=v.state==="BRANCH";if(isB)bmin+=m;else omin+=m;
-const k=v.manager+"|"+(isB?v.branch:"")+"|"+v.state;const o=g[k]||(g[k]={m:v.manager,b:isB?(v.branchName||"")+(v.city?" ("+v.city+")":""):"-",s:SL[v.state]||v.state,n:0,min:0});o.n++;o.min+=m});
-const sum=Object.values(g).sort((a,b)=>a.m.localeCompare(b.m)||(a.b==="-")-(b.b==="-")||b.min-a.min).map(x=>[x.m,x.b,x.s,x.n,hm(x.min),x.min]);
-const sel=id=>$(id).selectedOptions[0]?$(id).selectedOptions[0].text:"All";
-return{head,body,sum,sumHead:["Name","Branch","Status","Count","Time diff","Minutes"],bmin,omin,total:bmin+omin,visits:rows.filter(v=>v.state==="BRANCH").length,
-mgrs:new Set(rows.map(v=>v.manager)).size,brs:new Set(rows.filter(v=>v.state==="BRANCH").map(v=>v.branch)).size,from:f,to:t,trunc,
-title:(D.company.name||"MartOps")+" - Manager Activity Report",sub:"Period: "+f+" to "+t+"  |  "+sel("rm")+"  |  "+sel("rb")+"  |  "+sel("rkd"),
-gen:"Generated "+dstr(Date.now())+" "+tstr(Date.now())+"  |  MartOps"}}
+r.head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Time diff","Minutes"];
+r.body=rows.map(v=>[dstr(v.arrived),v.manager,nb(v.branchName,v.city),lab(v),tm(v.arrived,v.arrived),v.left?tm(v.left,v.arrived):"Now",hm(Number(v.minutes)||0),Number(v.minutes)||0]);
+r.widths=[140,200,300,420,130,190,120,96];r.aligns=["l","l","l","l","l","l","r","r"];
+const g={};rows.forEach(v=>{const isB=v.state==="BRANCH",k=v.manager+"|"+(isB?v.branch:"")+"|"+v.state,o=g[k]||(g[k]={m:v.manager,b:isB?nb(v.branchName,v.city):"-",s:SL[v.state]||v.state,n:0,t:0});o.n++;o.t+=Number(v.minutes)||0});
+r.sumHead=["Name","Branch","Status","Count","Time diff","Minutes"];
+r.sum=Object.values(g).sort((a,b)=>a.m.localeCompare(b.m)||(a.b==="-")-(b.b==="-")||b.t-a.t).map(x=>[x.m,x.b,x.s,x.n,hm(x.t),x.t]);r.sumWidths=[260,330,420,120,200,120];r.sumAligns=["l","l","l","r","r","r"]}
+r.visits=r.body.length;return r}
 function paintReport(){const r=RP,th=a=>"<tr>"+a.map(h=>`<th>${E(h)}</th>`).join("")+"</tr>",td=a=>"<tr>"+a.map(c=>`<td>${E(c)}</td>`).join("")+"</tr>";
-$("rk").innerHTML=[[r.visits,"Branch visits"],[hm(r.bmin),"Time at branches"],[hm(r.omin),"Time not at branch"],[r.mgrs,"Managers"]].map(k=>`<div class="k"><b>${E(k[0])}</b><span>${k[1]}</span></div>`).join("");
-$("rr").innerHTML=`<table><thead>${th(r.head)}</thead><tbody>${r.body.map(td).join("")||'<tr><td colspan="8">No activity in this period.</td></tr>'}</tbody></table>`+
+$("rk").innerHTML=r.kpis.map(k=>`<div class="k"><b>${E(k[0])}</b><span>${k[1]}</span></div>`).join("");
+$("rr").innerHTML=`<table><thead>${th(r.head)}</thead><tbody>${r.body.map(td).join("")||'<tr><td colspan="9">No data in this period.</td></tr>'}</tbody></table>`+
 (r.sum.length?`<h2 style="margin-top:14px">Summary</h2><table><thead>${th(r.sumHead)}</thead><tbody>${r.sum.map(td).join("")}</tbody></table>`:"")+
 (r.trunc?'<p class="err">Only the first 5000 visits are shown. Choose a shorter period.</p>':"");
 $("rd").classList.toggle("hide",!r.body.length)}
@@ -182,7 +201,7 @@ $("rd").classList.toggle("hide",!r.body.length)}
 const fname=ext=>(D.company.name||"MartOps").replace(/[^\w]+/g,"_")+"_Activity_"+RP.from+"_to_"+RP.to+"."+ext;
 function save(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 function toText(r){const tbl=(h,rows)=>{const all=[h,...rows].map(x=>x.map(String)),w=h.map((_,i)=>Math.max(...all.map(x=>x[i].length)));return all.map(x=>x.map((c,i)=>c.padEnd(w[i])).join("  ")).join("\n")};
-return [r.title,r.sub,r.gen,"","Branch visits: "+r.visits+"   Time at branches: "+hm(r.bmin)+"   Time not at branch: "+hm(r.omin),"",tbl(r.head,r.body),"","SUMMARY",tbl(r.sumHead,r.sum)].join("\n")}
+return [r.title,r.sub,r.gen,"",r.kpis.map(k=>k[0]+": "+k[1]).join("   "),"",tbl(r.head,r.body),"","SUMMARY",tbl(r.sumHead,r.sum)].join("\n")}
 const crcT=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
 const crc32=b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=crcT[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0};
 function zipFiles(files,type){const enc=new TextEncoder(),parts=[],cen=[],u16=n=>[n&255,(n>>8)&255],u32=n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];let off=0;
@@ -206,8 +225,8 @@ const files=[
 {name:"xl/workbook.xml",data:H+`<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Visits" sheetId="1" r:id="rId1"/><sheet name="Summary" sheetId="2" r:id="rId2"/></sheets></workbook>`},
 {name:"xl/_rels/workbook.xml.rels",data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
 {name:"xl/styles.xml",data:H+`<styleSheet ${NS}><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2B84B"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
-{name:"xl/worksheets/sheet1.xml",data:sheetXml(s1,[4],[13,18,26,38,13,18,11,9])},
-{name:"xl/worksheets/sheet2.xml",data:sheetXml(s2,[0],[18,26,38,8,12,9])}];
+{name:"xl/worksheets/sheet1.xml",data:sheetXml(s1,[4],r.widths.map(x=>Math.round(x/9)))},
+{name:"xl/worksheets/sheet2.xml",data:sheetXml(s2,[0],r.sumWidths.map(x=>Math.round(x/10)))}];
 return zipFiles(files,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
 function renderPages(r){const W=1684,H=1190,M=44,RH=40,FF='"Segoe UI",Arial,"Noto Naskh Arabic","Noto Nastaliq Urdu",sans-serif',pages=[];let x,y;
 const newPage=()=>{const cv=document.createElement("canvas");cv.width=W;cv.height=H;x=cv.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,W,H);x.textBaseline="middle";pages.push(cv);y=M};
@@ -222,10 +241,10 @@ x.strokeStyle="#e3e3e8";x.beginPath();x.moveTo(M,y+RH);x.lineTo(M+tw,y+RH);x.str
 newPage();x.textAlign="left";x.fillStyle="#111";x.font="bold 34px "+FF;x.fillText(fit(r.title,W-2*M),M,y+20);y+=50;
 x.font="22px "+FF;x.fillStyle="#444";x.fillText(fit(r.sub,W-2*M),M,y+10);y+=34;
 x.font="18px "+FF;x.fillStyle="#777";x.fillText(r.gen,M,y+8);y+=36;
-x.fillStyle="#111";x.font="bold 24px "+FF;x.fillText("Branch visits: "+r.visits+"     Time at branches: "+hm(r.bmin)+"     Time not at branch: "+hm(r.omin)+"     Managers: "+r.mgrs,M,y+10);y+=46;
-table(r.head,r.body,[140,200,300,420,130,190,120,96],["l","l","l","l","l","l","r","r"]);
+x.fillStyle="#111";x.font="bold 24px "+FF;x.fillText(r.kpis.map(k=>k[0]+": "+k[1]).join("     "),M,y+10);y+=46;
+table(r.head,r.body,r.widths,r.aligns);
 if(r.sum.length){if(y+RH*4>H-M-30)newPage();x.textAlign="left";x.fillStyle="#111";x.font="bold 26px "+FF;x.fillText("Summary",M,y+16);y+=42;
-table(r.sumHead,r.sum,[260,330,420,120,200,120],["l","l","l","r","r","r"])}
+table(r.sumHead,r.sum,r.sumWidths,r.sumAligns)}
 pages.forEach((p,i)=>{const c=p.getContext("2d");c.font="16px "+FF;c.fillStyle="#999";c.textAlign="right";c.textBaseline="middle";c.fillText("Page "+(i+1)+" of "+pages.length+"  |  MartOps",W-M,H-24)});
 return pages}
 function toPdf(pages){const enc=new TextEncoder(),chunks=[],offs=[];let len=0;
