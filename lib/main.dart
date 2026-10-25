@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'api.dart';
 import 'payment.dart';
+import 'about.dart';
 import 'staff.dart';
 
 void main() {
@@ -57,11 +58,14 @@ class Welcome extends StatelessWidget {
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Text('MartOps', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700)),
                   const SizedBox(height: 4),
-                  const Text('Store presence & duty tracker', style: TextStyle(color: Colors.grey)),
+                  const Text('Manager branch visit tracking', style: TextStyle(color: Colors.grey)),
                   const SizedBox(height: 40),
                   SizedBox(width: double.infinity, height: 52, child: FilledButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Register())), child: const Text('Register Company'))),
                   const SizedBox(height: 12),
                   SizedBox(width: double.infinity, height: 52, child: OutlinedButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Login())), child: const Text('Login'))),
+                  const SizedBox(height: 20),
+                  TextButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen())), child: const Text('About / Help / Privacy Policy')),
+                  const Text('Help line: '+kHelpline, style: TextStyle(color: Colors.grey)),
                 ]),
               ),
             ),
@@ -217,7 +221,7 @@ class OwnerHome extends StatelessWidget {
   const OwnerHome({super.key});
   @override
   Widget build(BuildContext c) => Scaffold(
-        appBar: AppBar(title: Text(Session.companyName ?? 'Owner'), actions: [IconButton(icon: const Icon(Icons.payments_outlined), tooltip: 'Payment', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen()))), IconButton(icon: const Icon(Icons.logout), onPressed: () => logout(c))]),
+        appBar: AppBar(title: Text(Session.companyName ?? 'Owner'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))), IconButton(icon: const Icon(Icons.payments_outlined), tooltip: 'Payment', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen()))), IconButton(icon: const Icon(Icons.logout), onPressed: () => logout(c))]),
         body: FutureBuilder<Map>(
           future: Session.call('dashboard'),
           builder: (c, s) {
@@ -240,15 +244,15 @@ class OwnerHome extends StatelessWidget {
               const Padding(padding: EdgeInsets.only(top: 8, left: 16), child: Text('Managers abhi', style: TextStyle(fontWeight: FontWeight.w600))),
               for (final u in st)
                 ListTile(
-                  leading: Icon(Icons.circle, size: 14, color: u['status'] == 'CONNECTED' ? Colors.green : Colors.orange),
+                  leading: Icon(Icons.circle, size: 14, color: u['status'] == 'CONNECTED' ? Colors.green : (u['status'] == 'NO_SIGNAL' || u['status'] == 'NONET') ? Colors.redAccent : Colors.orange),
                   title: Text('${u['name']}'),
-                  subtitle: Text(u['status'] == 'CONNECTED' ? 'Abhi: ${names[u['branch']] ?? ''}' : u['status'] == 'NO_DATA' ? 'Tracking shuru nahi hui' : 'Kisi branch par nahi'),
+                  subtitle: Text(stLabel(u['status'], branch: '${names[u['branch']] ?? ''}', detail: '${u['detail'] ?? ''}')),
                 ),
-              const Padding(padding: EdgeInsets.only(top: 12, left: 16), child: Text('Recent branch visits', style: TextStyle(fontWeight: FontWeight.w600))),
+              const Padding(padding: EdgeInsets.only(top: 12, left: 16), child: Text('Recent activity', style: TextStyle(fontWeight: FontWeight.w600))),
               for (final v in vis)
                 ListTile(
                   dense: true,
-                  title: Text('${v['manager']} - ${v['branchName']}'),
+                  title: Text('${v['manager']} - ${v['state'] == 'BRANCH' ? v['branchName'] : stLabel(v['state'], detail: '${v['detail'] ?? ''}')}'),
                   subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi yahan)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min'),
                 ),
               if (vis.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Abhi koi visit nahi.')),
