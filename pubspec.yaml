@@ -10,6 +10,7 @@ dependencies:
   flutter_foreground_task: ^8.17.0
   network_info_plus: ^6.0.0
   location: ^8.0.0
+  connectivity_plus: ^6.1.0
   permission_handler: ^11.3.1
   http: ^1.2.2
   shared_preferences: ^2.3.2
