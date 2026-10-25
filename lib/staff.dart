@@ -4,6 +4,7 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:location/location.dart' as lc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'about.dart';
 import 'api.dart';
 import 'presence_service.dart';
 
@@ -19,7 +20,7 @@ class _StaffHomeState extends State<StaffHome> {
   Map? me;
   List visits = [];
   bool running = false, unknown = false, starting = false;
-  String err = '', ssid = '', permMsg = '', cur = '', seen = '', hint = '';
+  String err = '', ssid = '', permMsg = '', st = '', stB = '', stD = '', hint = '';
   bool diagBusy = false;
 
   @override
@@ -34,7 +35,7 @@ class _StaffHomeState extends State<StaffHome> {
 
   void _onData(Object d) {
     if (d is Map && mounted) {
-      setState(() { cur = '${d['cur'] ?? ''}'; seen = '${d['seen'] ?? ''}'; unknown = d['unknown'] == true; ssid = '${d['ssid'] ?? ''}'; });
+      setState(() { st = '${d['s'] ?? ''}'; stB = '${d['b'] ?? ''}'; stD = '${d['d'] ?? ''}'; unknown = d['loc'] == true; ssid = '${d['ssid'] ?? ''}'; });
       if (unknown) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
     }
   }
@@ -93,10 +94,39 @@ class _StaffHomeState extends State<StaffHome> {
     await _startService();
   }
 
+  /// Play Store "prominent disclosure": shown before the system location prompt, once.
+  Future<bool> _disclosure() async {
+    final p = await SharedPreferences.getInstance();
+    if (p.getBool('disclosed') == true) return true;
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => AlertDialog(
+        title: const Text('Location aur background use'),
+        content: const SingleChildScrollView(child: Text(
+            'MartOps needs the Location permission only because Android requires it to read the name of the Wi-Fi network you are connected to. The app does not read or save your GPS position.\n\n'
+            'The app also checks the Wi-Fi name in the background (with a notification), even when the app is closed, so your visits to company branches are recorded automatically: which branch, arrival time and departure time. Your company owner can see this record.\n\n'
+            'Urdu: App sirf Wi-Fi ka naam padhne ke liye Location maangti hai, aap ki GPS position save nahi karti. App band hone par bhi branch ke Wi-Fi se connect hone ka record (kab aaye, kab gaye) aap ke owner ko dikhta hai.\n\n'
+            'Agree dabane ke baad Android permission poochega. "Allow all the time" aur "Precise" chuno.')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(c, true), child: const Text('Agree')),
+        ],
+      ),
+    );
+    if (ok == true) { await p.setBool('disclosed', true); return true; }
+    return false;
+  }
+
   Future<void> _startService() async {
     if (starting) return;
     starting = true;
     try {
+      if (!await _disclosure()) {
+        if (mounted) setState(() => permMsg = 'Tracking ke liye "Agree" zaroori hai. Neeche button dabao.');
+        return;
+      }
       if (!await Permission.locationWhenInUse.request().isGranted) {
         if (mounted) setState(() => permMsg = 'Location permission zaroori hai (Wi-Fi ka naam padhne ke liye). Neeche button dabao.');
         return;
@@ -114,7 +144,7 @@ class _StaffHomeState extends State<StaffHome> {
 
   String get _where {
     final bs = (me?['branches'] ?? []) as List;
-    final id = seen.isNotEmpty ? seen : cur;
+    final id = st == 'BRANCH' ? stB : '';
     for (final b in bs) { if ('${b['id']}' == id) return '${b['name']}${'${b['city']}'.isEmpty ? '' : ', ${b['city']}'}'; }
     return '';
   }
@@ -123,15 +153,15 @@ class _StaffHomeState extends State<StaffHome> {
   Widget build(BuildContext c) {
     final here = _where;
     return Scaffold(
-      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps')),
+      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen())))]),
       body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
         Text('Salam, ${Session.name}', style: Theme.of(c).textTheme.headlineSmall),
         if (err.isNotEmpty) Text(err, style: const TextStyle(color: Colors.redAccent)),
         const SizedBox(height: 12),
         if (running) ...[
           ListTile(
-            leading: Icon(Icons.circle, color: here.isNotEmpty ? Colors.green : Colors.orange),
-            title: Text(here.isNotEmpty ? 'Abhi: $here' : 'Kisi branch ke Wi-Fi se connected nahi'),
+            leading: Icon(Icons.circle, color: st == 'BRANCH' ? Colors.green : (st == 'NONET' ? Colors.redAccent : Colors.orange)),
+            title: Text(st.isEmpty ? 'Check ho raha hai...' : st == 'BRANCH' ? 'Abhi: $here' : stLabel(st, detail: stD)),
             subtitle: ssid.isNotEmpty && !unknown ? Text('Wi-Fi: $ssid') : null),
           if (unknown) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Wi-Fi ka naam nahi mil raha.', style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
@@ -141,17 +171,17 @@ class _StaffHomeState extends State<StaffHome> {
               TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
             ]),
           ])),
-          const Padding(padding: EdgeInsets.all(16), child: Text('Branch visit tracking automatic on hai. Jis branch ke Wi-Fi se connect hoge, wo khud save hoga, app band ho tab bhi.', style: TextStyle(color: Colors.grey))),
+          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.', style: TextStyle(color: Colors.grey))),
         ] else ...[
           if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
           FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
         ],
         const SizedBox(height: 20),
-        const Text('Meri recent branch visits', style: TextStyle(fontWeight: FontWeight.w600)),
+        const Text('Meri recent activity', style: TextStyle(fontWeight: FontWeight.w600)),
         for (final v in visits) ListTile(
           dense: true,
-          title: Text('${v['branchName']}${'${v['city']}'.isEmpty ? '' : ', ${v['city']}'}'),
-          subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi yahan)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min')),
+          title: Text(v['state'] == 'BRANCH' ? '${v['branchName']}${'${v['city']}'.isEmpty ? '' : ', ${v['city']}'}' : stLabel(v['state'], detail: '${v['detail'] ?? ''}')),
+          subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min')),
         if (visits.isEmpty) const Text('Abhi koi visit nahi.'),
       ])),
     );
