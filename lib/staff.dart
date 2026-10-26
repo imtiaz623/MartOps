@@ -21,7 +21,8 @@ class _StaffHomeState extends State<StaffHome> {
   List visits = [];
   bool running = false, unknown = false, starting = false;
   String err = '', ssid = '', permMsg = '', st = '', stB = '', stD = '', hint = '';
-  bool diagBusy = false;
+  bool diagBusy = false, gpsOff = false;
+  int locAcc = 0, fixAt = 0;
 
   @override
   void initState() {
@@ -35,8 +36,8 @@ class _StaffHomeState extends State<StaffHome> {
 
   void _onData(Object d) {
     if (d is Map && mounted) {
-      setState(() { st = '${d['s'] ?? ''}'; stB = '${d['b'] ?? ''}'; stD = '${d['d'] ?? ''}'; unknown = d['loc'] == true; ssid = '${d['ssid'] ?? ''}'; });
-      if (unknown) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
+      setState(() { st = '${d['s'] ?? ''}'; stB = '${d['b'] ?? ''}'; stD = '${d['d'] ?? ''}'; unknown = d['loc'] == true; ssid = '${d['ssid'] ?? ''}'; gpsOff = d['gpsoff'] == true; locAcc = (d['acc'] as num?)?.toInt() ?? 0; fixAt = (d['fixat'] as num?)?.toInt() ?? 0; });
+      if (unknown || gpsOff) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
     }
   }
 
@@ -69,6 +70,12 @@ class _StaffHomeState extends State<StaffHome> {
   Future<void> _load() async {
     running = await FlutterForegroundTask.isRunningService;
     final p = await SharedPreferences.getInstance();
+    if (me == null) {  // show the last known screen at once; fresh data replaces it a moment later
+      try {
+        final c1 = p.getString('me_cache'), c2 = p.getString('visits_cache');
+        if (c1 != null && mounted) setState(() { me = jsonDecode(c1) as Map; if (c2 != null) visits = jsonDecode(c2) as List; });
+      } catch (_) {}
+    }
     // Fast start: use the saved branch/Wi-Fi list so tracking begins before the server replies.
     if (!running && (p.getString('cfg') ?? '').contains('"id"')) { await _startService(); }
     final r = await Session.call('me');
@@ -79,6 +86,8 @@ class _StaffHomeState extends State<StaffHome> {
       if (r['ok'] == true) { me = r; err = ''; } else { err = '${r['error']}'; }
       if (v['ok'] == true) visits = v['visits'];
     });
+    if (r['ok'] == true) { await p.setString('me_cache', jsonEncode(r)); }
+    if (v['ok'] == true) { await p.setString('visits_cache', jsonEncode(v['visits'])); }
     await _ensureTracking();
     if (running) _ensureGps();
   }
@@ -88,7 +97,7 @@ class _StaffHomeState extends State<StaffHome> {
     final branches = (me?['branches'] ?? []) as List;
     final p = await SharedPreferences.getInstance();
     // Latest token + branch/Wi-Fi list is saved every time so the background service always has it.
-    await p.setString('cfg', jsonEncode({'token': Session.token, 'branches': [for (final b in branches) {'id': b['id'], 'name': b['name'], 'wifi': b['wifi']}]}));
+    await p.setString('cfg', jsonEncode({'token': Session.token, 'work': me?['work'], 'branches': [for (final b in branches) {'id': b['id'], 'name': b['name'], 'wifi': b['wifi']}]}));
     if (branches.isEmpty) { setState(() => permMsg = 'Owner ne abhi koi branch / Wi-Fi add nahi kiya.'); return; }
     if (running) { setState(() => permMsg = ''); return; }
     await _startService();
@@ -97,7 +106,7 @@ class _StaffHomeState extends State<StaffHome> {
   /// Play Store "prominent disclosure": shown before the system location prompt, once.
   Future<bool> _disclosure() async {
     final p = await SharedPreferences.getInstance();
-    if (p.getBool('disclosed') == true) return true;
+    if (p.getBool('disclosed2') == true) return true;
     if (!mounted) return false;
     final ok = await showDialog<bool>(
       context: context,
@@ -105,9 +114,9 @@ class _StaffHomeState extends State<StaffHome> {
       builder: (c) => AlertDialog(
         title: const Text('Location aur background use'),
         content: const SingleChildScrollView(child: Text(
-            'MartOps needs the Location permission only because Android requires it to read the name of the Wi-Fi network you are connected to. The app does not read or save your GPS position.\n\n'
-            'The app also checks the Wi-Fi name in the background (with a notification), even when the app is closed, so your visits to company branches are recorded automatically: which branch, arrival time and departure time. Your company owner can see this record.\n\n'
-            'Urdu: App sirf Wi-Fi ka naam padhne ke liye Location maangti hai, aap ki GPS position save nahi karti. App band hone par bhi branch ke Wi-Fi se connect hone ka record (kab aaye, kab gaye) aap ke owner ko dikhta hai.\n\n'
+            'MartOps uses your phone\'s precise location (GPS) and Wi-Fi name during the company working time set by your owner. About every 5 minutes, and whenever your status changes, the app saves your position (latitude, longitude, accuracy) with the time, so your company owner can see where you are and which branch you visited. Nothing is recorded outside company time.\n\n'
+            'This also works in the background (with a notification), even when the app is closed. The owner of your company can see this record. It is not sold or used for ads.\n\n'
+            'Urdu: Company time mein har 5 minute mein aur status badalne par app aap ki location (GPS) aur Wi-Fi ka naam save karti hai taake owner dekh sake aap kahan hain aur kis branch gaye. App band ho tab bhi chalta hai. Company time ke baad kuch record nahi hota.\n\n'
             'Agree dabane ke baad Android permission poochega. "Allow all the time" aur "Precise" chuno.')),
         actions: [
           TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
@@ -115,7 +124,7 @@ class _StaffHomeState extends State<StaffHome> {
         ],
       ),
     );
-    if (ok == true) { await p.setBool('disclosed', true); return true; }
+    if (ok == true) { await p.setBool('disclosed2', true); return true; }
     return false;
   }
 
@@ -149,6 +158,22 @@ class _StaffHomeState extends State<StaffHome> {
     return '';
   }
 
+  String get _locText {
+    if (fixAt == 0) return 'Location: company time mein har 5 minute mein record hoti hai.';
+    final mins = ((DateTime.now().millisecondsSinceEpoch - fixAt) / 60000).round();
+    return 'Aakhri location: ±$locAcc m, $mins min pehle. (Company time mein har 5 minute mein record hoti hai.)';
+  }
+
+  String get _workText {
+    final w = me?['work'];
+    if (w is! Map || w['s'] == null || w['e'] == null) return '';
+    String hm(num m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
+    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final mask = (w['d'] as num?)?.toInt() ?? 127;
+    final days = mask == 127 ? 'roz' : [for (var i = 0; i < 7; i++) if (((mask >> i) & 1) == 1) names[i]].join(', ');
+    return 'Company time: ${hm(w['s'])} - ${hm(w['e'])} ($days). Is ke ilawa koi record nahi hota.';
+  }
+
   @override
   Widget build(BuildContext c) {
     final here = _where;
@@ -163,15 +188,17 @@ class _StaffHomeState extends State<StaffHome> {
             leading: Icon(Icons.circle, color: st == 'BRANCH' ? Colors.green : (st == 'NONET' ? Colors.redAccent : Colors.orange)),
             title: Text(st.isEmpty ? 'Check ho raha hai...' : st == 'BRANCH' ? 'Abhi: $here' : stLabel(st, detail: stD)),
             subtitle: ssid.isNotEmpty && !unknown ? Text('Wi-Fi: $ssid') : null),
-          if (unknown) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Wi-Fi ka naam nahi mil raha.', style: TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
+          if (_locText.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text(_locText, style: const TextStyle(color: Colors.grey))),
+          if (unknown || gpsOff) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(gpsOff ? 'Phone ki Location (GPS) band hai.' : 'Wi-Fi ka naam nahi mil raha.', style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
             if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
             Row(children: [
               TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
               TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
             ]),
           ])),
-          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.', style: TextStyle(color: Colors.grey))),
+          if (_workText.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(_workText, style: const TextStyle(fontWeight: FontWeight.w600))),
+          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.grey))),
         ] else ...[
           if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
           FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
