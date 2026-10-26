@@ -47,6 +47,8 @@ String stLabel(dynamic state, {String branch = '', String detail = ''}) {
       return 'Wi-Fi connected, naam nahi mil raha (Location off)';
     case 'OFF':
       return 'Phone band / app band';
+    case 'OFFDUTY':
+      return 'Company time nahi hai (tracking pause)';
     case 'NO_SIGNAL':
       return 'Koi signal nahi (phone off / internet band / app band)';
     case 'NO_DATA':
@@ -77,7 +79,7 @@ class Session {
 
   static Future<void> clear() async {
     final p = await SharedPreferences.getInstance();
-    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue'); await p.remove('tick');
+    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue'); await p.remove('tick'); await p.remove('lq');
     token = null; role = null;
   }
 
