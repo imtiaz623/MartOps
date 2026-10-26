@@ -1,41 +1,44 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'help.dart';
 
 const kHelpline = '0306 9348405';
 const kDevName = 'Imtiaz Ali Qumbrani';
 const kDevEmail = 'imtiazalee02@gmail.com';
 const kPolicyUrl = 'https://imtiaz623.github.io/MartOps/privacy.html';
 
-const kAbout = r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. Whenever the phone connects to the Wi-Fi of a branch, the app records which branch it was, when the manager arrived and when he left. The owner sees this visit log in the app and on the web panel, so he knows which branches his manager visited.''';
+const kAbout = r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. During the company working time set by the owner, the app records which branch Wi-Fi the phone connects to, when the manager arrived and left, whether the phone was on another Wi-Fi, on mobile data, without internet or switched off, and the phone's GPS position. The owner sees this in the app and on the web panel, with reports and a map link for each position.''';
 
 const kPolicy = <List<String>>[
-  [r'''1. About this policy''', r'''This policy explains what information the MartOps app and its web panel collect, why, and what choices you have. MartOps is developed by Imtiaz Ali Qumbrani (imtiazalee02@gmail.com, help line 0306 9348405). Last updated: 25 October 2026.'''],
-  [r'''2. What MartOps does''', r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. Whenever the phone connects to the Wi-Fi of a branch, the app records which branch it was, when the manager arrived and when he left. The owner sees this visit log in the app and on the web panel, so he knows which branches his manager visited.'''],
+  [r'''1. About this policy''', r'''This policy explains what information the MartOps app and its web panel collect, why, and what choices you have. MartOps is developed by Imtiaz Ali Qumbrani (imtiazalee02@gmail.com, help line 0306 9348405). Last updated: 26 October 2026.'''],
+  [r'''2. What MartOps does''', r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. During the company working time set by the owner, the app records which branch Wi-Fi the phone connects to, when the manager arrived and left, whether the phone was on another Wi-Fi, on mobile data, without internet or switched off, and the phone's GPS position. The owner sees this in the app and on the web panel, with reports and a map link for each position.'''],
   [r'''3. Information we collect''', r'''Account details: company name, owner name, phone number, optional WhatsApp number for reports, manager names and optional phone numbers, and login IDs. Passwords and PINs are stored only in hashed form.
 
-Branch details typed by the owner: branch name, location name, and the names of the Wi-Fi networks of each branch.
+Branch details typed by the owner: branch name, location name, the names of the Wi-Fi networks of each branch, and the company working time (start, end, days).
 
-Visit records (manager phones): the branch whose Wi-Fi the phone connected to, the arrival time, the departure time, the duration, the time the app was last active, and the name of the Wi-Fi network the phone was connected to.
+Status records (manager phones, during company time): the branch whose Wi-Fi the phone connected to, the name of any other Wi-Fi it connected to, mobile data use, no internet, times when the phone was off or the app was not running, and the arrival time, departure time and duration of each status.
+
+Location (manager phones, during company time only): about every 5 minutes and whenever the status changes, the phone's precise GPS position (latitude, longitude and accuracy), the time, whether a mock-location (fake GPS) app was detected, and the times when GPS or the Location permission was switched off. Nothing is recorded outside company time.
 
 Payment details typed by the owner: the plan, the amount and the Transaction ID (TID) of a payment made outside the app. We never ask for card, bank or wallet passwords or PINs.
 
-Optional backup: if the owner pastes a link to his own Google Sheet, visit records are also written to that sheet.
+Optional backup: if the owner pastes a link to his own Google Sheet, status records are also written to that sheet.
 
-We do not collect your GPS coordinates, contacts, photos, files, messages, call history or advertising ID.'''],
-  [r'''4. Location permission and background use''', r'''Android requires the Location permission before any app can read the name of the Wi-Fi network the phone is connected to. MartOps uses it only for this. It does not read, store or show your GPS position or a map location.
+We do not collect your contacts, photos, files, messages, call history or advertising ID.'''],
+  [r'''4. Location permission and background use''', r'''MartOps asks for precise Location, including "Allow all the time". It is used for two things: reading the name of the connected Wi-Fi network (Android requires the Location permission for this) and saving the manager's GPS position during company time.
 
-On manager phones the app runs a foreground service with a visible notification, and asks for "Allow all the time" location access, so that it can check the Wi-Fi name every few seconds even when the app is closed. This is how visits are recorded automatically. The check stops if the app is uninstalled.
+On manager phones the app runs a foreground service with a visible notification so that it keeps working when the app is closed or the phone restarts. Outside the company working time the app checks nothing and records nothing.
 
-This record is visible to the owner of the manager's company. Owners must tell their managers that this tracking is used and must follow the laws that apply to them.'''],
-  [r'''5. How we use the information''', r'''To show visit logs and reports to the owner, to run login and subscription (trial, payment verification, expiry), to send daily reports if the owner enables them, to give support, and to keep the service secure. We do not use it for advertising and we do not sell it.'''],
+This record is visible to the owner of the manager's company. Owners must tell their managers that this tracking is used and must follow the laws that apply to them. Managers see a notice in the app before the permission is requested.'''],
+  [r'''5. How we use the information''', r'''To show status records, locations and reports to the owner, to run login and subscription (trial, payment verification, expiry), to send daily reports if the owner enables them, to give support, and to keep the service secure. We do not use it for advertising and we do not sell it.'''],
   [r'''6. Who we share it with''', r'''We do not sell or rent personal information. Data is stored with Google (Google Sheets and Google Apps Script) which acts as our service provider. The web panel is hosted on GitHub Pages, which does not store your records.
 
-If the owner turns on WhatsApp reports, the owner's number and the report text are sent through the WhatsApp Business platform. If the owner connects his own Google Sheet, records are sent to that sheet.
+When the owner taps a map link, the position in that link is opened in Google Maps in his browser or app. If the owner turns on WhatsApp reports, the owner's number and the report text are sent through the WhatsApp Business platform. If the owner connects his own Google Sheet, records are sent to that sheet.
 
-Inside a company, the owner can see all of his managers' visit records. A manager can see his own records. We may disclose information if the law requires it.'''],
+Inside a company, the owner can see all of his managers' records. A manager can see his own records. We may disclose information if the law requires it.'''],
   [r'''7. Storage and security''', r'''Data travels over HTTPS. Passwords and PINs are hashed. Access to records needs a login token. No system is completely secure, so we cannot guarantee absolute security.'''],
   [r'''8. Retention and deletion''', r'''Records are kept while the company account is active. An owner can remove a manager at any time. To delete a company account and its data, or a single person's data, follow the steps at https://imtiaz623.github.io/MartOps/delete-account.html or email imtiazalee02@gmail.com. We delete the data within 30 days. Payment records (plan, amount, date, TID) may be kept as needed for accounting.'''],
-  [r'''9. Your choices''', r'''You can ask us to show, correct or delete your information, and you can withdraw location permission in Android settings. Without Location permission the app cannot record branch visits.'''],
+  [r'''9. Your choices''', r'''You can ask us to show, correct or delete your information, and you can withdraw location permission in Android settings. Without Location permission the app cannot record visits or positions.'''],
   [r'''10. Children''', r'''MartOps is made for business use by adults. It is not directed at children under 18.'''],
   [r'''11. Changes''', r'''If we change this policy we will update the date above and the page at https://imtiaz623.github.io/MartOps/privacy.html.'''],
   [r'''12. Contact''', r'''Developer: Imtiaz Ali Qumbrani
@@ -67,6 +70,12 @@ class AboutScreen extends StatelessWidget {
             const Text(kAbout),
             const SizedBox(height: 16),
             _copy(c, 'Help line', kHelpline, Icons.call),
+            Row(children: [
+              Expanded(child: FilledButton.icon(onPressed: () => openWhatsApp(c), icon: const Icon(Icons.chat), label: const Text('WhatsApp par chat'))),
+              const SizedBox(width: 10),
+              Expanded(child: OutlinedButton.icon(onPressed: () => callHelp(c), icon: const Icon(Icons.call), label: const Text('Call'))),
+            ]),
+            const SizedBox(height: 8),
             _copy(c, 'Email', kDevEmail, Icons.email_outlined),
             _copy(c, 'Developer', kDevName, Icons.person_outline),
             _copy(c, 'Privacy Policy (web)', kPolicyUrl, Icons.privacy_tip_outlined),
