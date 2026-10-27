@@ -5,6 +5,7 @@ import 'package:location/location.dart' as lc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'about.dart';
+import 'main.dart' show logout;
 import 'api.dart';
 import 'presence_service.dart';
 
@@ -158,6 +159,31 @@ class _StaffHomeState extends State<StaffHome> {
     return '';
   }
 
+  /// Logout / stopping tracking needs the unlock PIN (the owner's PIN, or the manager's own password if none is set).
+  Future<void> _unlockAndLogout(BuildContext c) async {
+    final ctl = TextEditingController();
+    final pin = await showDialog<String>(
+      context: c,
+      builder: (d) => AlertDialog(
+        title: const Text('PIN darj karo'),
+        content: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Text('Logout ya tracking band karne ke liye owner ki Unlock PIN (ya PIN na ho to apna password) chahiye.'),
+          TextField(controller: ctl, obscureText: true, keyboardType: TextInputType.number, autofocus: true, decoration: const InputDecoration(labelText: 'PIN / password')),
+        ]),
+        actions: [TextButton(onPressed: () => Navigator.pop(d), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(d, ctl.text), child: const Text('OK'))],
+      ),
+    );
+    if (pin == null || pin.isEmpty) return;
+    final r = await Session.call('checkLockPin', {'pin': pin});
+    if (!c.mounted) return;
+    if (r['ok'] == true) {
+      await logout(c);
+    } else {
+      final msg = {'wrong_pin': 'Galat PIN.', 'too_many_tries': 'Bohat galat koshish. 10 minute baad try karo.', 'network': 'Internet check karo.'}[r['error']] ?? '${r['error']}';
+      ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
   String get _locText {
     if (fixAt == 0) return 'Location: company time mein har 5 minute mein record hoti hai.';
     final mins = ((DateTime.now().millisecondsSinceEpoch - fixAt) / 60000).round();
@@ -178,7 +204,7 @@ class _StaffHomeState extends State<StaffHome> {
   Widget build(BuildContext c) {
     final here = _where;
     return Scaffold(
-      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen())))]),
+      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))), IconButton(icon: const Icon(Icons.lock_outline), tooltip: 'Logout / Tracking band (PIN)', onPressed: () => _unlockAndLogout(c))]),
       body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
         Text('Salam, ${Session.name}', style: Theme.of(c).textTheme.headlineSmall),
         if (err.isNotEmpty) Text(err, style: const TextStyle(color: Colors.redAccent)),
@@ -198,7 +224,7 @@ class _StaffHomeState extends State<StaffHome> {
             ]),
           ])),
           if (_workText.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(_workText, style: const TextStyle(fontWeight: FontWeight.w600))),
-          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.grey))),
+          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nWi-Fi, Location ya Data off karoge to owner ko record mein dikhega.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.grey))),
         ] else ...[
           if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
           FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
