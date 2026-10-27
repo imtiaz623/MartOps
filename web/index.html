@@ -64,6 +64,8 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <div class="f" style="margin-top:8px"><label>Start <input type="time" id="tws" value="09:00"></label><label>End <input type="time" id="twe" value="18:00"></label></div>
 <div class="bar" style="border:0;padding:0;margin-top:8px" id="tdays"><label><input type="checkbox" data-wd="1"> Mon</label><label><input type="checkbox" data-wd="2"> Tue</label><label><input type="checkbox" data-wd="3"> Wed</label><label><input type="checkbox" data-wd="4"> Thu</label><label><input type="checkbox" data-wd="5"> Fri</label><label><input type="checkbox" data-wd="6"> Sat</label><label><input type="checkbox" data-wd="0"> Sun</label></div>
 <div class="bar" style="border:0;padding:0;margin-top:10px"><button class="p" id="tsv">Save company time</button></div><p id="tmsg" class="err"></p>
+<h2>Unlock PIN</h2><p style="color:var(--mu)">Manager app mein Logout / Tracking band karne ke liye ye PIN poochi jati hai (4 se 8 ginti). PIN na ho to manager se uska apna password poocha jata hai. Android phone ki Wi-Fi, Location ya Data off karne se rokna app ke bas mein nahi, wo sirf record hota hai.</p>
+<div class="f"><input id="lpn" type="password" inputmode="numeric" placeholder="New unlock PIN"><button class="p" id="lps">Save PIN</button><button id="lpr">Remove PIN</button></div><p id="lpm" class="err"></p>
 <h2>Backup and reports</h2><div class="f"><input id="bu" placeholder="Your Google Sheet link (optional backup)"><input id="wn" placeholder="Owner WhatsApp for nightly report"><button class="p" id="bs">Save</button></div><p id="bsh" style="color:var(--mu)"></p><p id="bm" class="err"></p></section></div>
 <div id="t-ab" class="hide"><section>
 <h2>MartOps kya kar sakta hai</h2>
@@ -110,7 +112,7 @@ function enter(){$("auth").classList.add("hide");$("app").classList.remove("hide
 $("lo").onclick=()=>{ls.s("mo_t","");location.reload()};
 // ---- render ----
 function show(){enter();const c=D.company;wl([]);$("cn").textContent=c.name;$("ci").innerHTML="Company code: <b>"+E(c.code)+"</b> (managers use this in the app)<br>Portal: "+E(c.portalUrl);
-$("bu").value=c.backupUrl;$("bsh").textContent=c.shareWith?"Backup ke liye apni Google Sheet ko is email par Editor share karo: "+c.shareWith+". Phir uska link upar paste karke Save dabao. Branch visits wahan khud aati rahengi.":"";$("wn").value=c.wa;fillWork(c.work);draw();subBar();loadReport()}
+$("bu").value=c.backupUrl;$("bsh").textContent=c.shareWith?"Backup ke liye apni Google Sheet ko is email par Editor share karo: "+c.shareWith+". Phir uska link upar paste karke Save dabao. Branch visits wahan khud aati rahengi.":"";$("wn").value=c.wa;fillWork(c.work);$("lpm").style.color="var(--mu)";$("lpm").textContent=D.company.lockPinSet?"Unlock PIN set hai.":"Unlock PIN abhi set nahi.";draw();subBar();loadReport()}
 function subBar(){const s=D.sub,d=s.trialEnd?Math.max(0,Math.ceil((s.trialEnd-Date.now())/864e5)):s.validUntil?Math.ceil((s.validUntil-Date.now())/864e5):0;
 $("sub").innerHTML=s.status==="ACTIVE"?`<span class="b ok">Active</span> ${d} days left`:`<span class="b wa">Trial</span> ${d} days left`}
 function lock(st){const M={PENDING:"Payment verification pending",REJECTED:"Payment rejected - send the correct TID",EXPIRED:"Plan expired - renew"};$("sub").innerHTML='<span class="b bd">Locked</span> '+(M[st]||"Payment needed");$("m").classList.add("on");$("cl").classList.add("hide")}
@@ -157,6 +159,10 @@ document.querySelectorAll("[data-wd]").forEach(b=>b.checked=x?((x.d>>Number(b.da
 $("tsv").onclick=async()=>{const days=[...document.querySelectorAll("[data-wd]")].filter(b=>b.checked).map(b=>Number(b.dataset.wd));
 const r=await api("saveSchedule",{enabled:$("ten").checked,start:$("tws").value,end:$("twe").value,days});
 $("tmsg").style.color=r.ok?"var(--ok)":"var(--bd)";$("tmsg").textContent=r.ok?"Saved. Phones ko naya time 5 minute mein mil jata hai.":({time_invalid:"Time sahi likho.",pick_at_least_one_day:"Kam az kam ek din chuno."}[r.error]||r.error);if(r.ok)refresh()};
+// ---- unlock PIN ----
+async function savePin(pin){const r=await api("setLockPin",{pin});$("lpm").style.color=r.ok?"var(--ok)":"var(--bd)";
+$("lpm").textContent=r.ok?(r.set?"PIN save ho gayi.":"PIN hata di gayi."):({pin_4_to_8_digits:"PIN 4 se 8 ginti ki ho."}[r.error]||r.error);if(r.ok)$("lpn").value=""}
+$("lps").onclick=()=>savePin($("lpn").value.trim());$("lpr").onclick=()=>savePin("");
 // ---- payment ----
 $("pay").onclick=()=>{$("m").classList.add("on")};$("cl").onclick=()=>$("m").classList.remove("on");
 $("sd").onclick=async()=>{const t=$("tid").value.trim();if(!t)return $("ms").textContent="Enter the transaction ID.";
