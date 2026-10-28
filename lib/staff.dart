@@ -1,17 +1,18 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:location/location.dart' as lc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'about.dart';
 import 'guide.dart';
 import 'main.dart' show logout;
 import 'api.dart';
 import 'presence_service.dart';
 
-/// Manager screen. Login once; tracking starts by itself and keeps running in the background.
-/// It records which branch (by Wi-Fi) the manager is at. No stop or logout button.
+/// Manager screen. Login once; tracking starts by itself and keeps running in the background
+/// (also after the app is closed or the phone restarts). The screen shows nothing but the tracking status:
+/// no history, no details, no settings. (Admin exit: long-press the status and enter the owner's unlock PIN.)
 class StaffHome extends StatefulWidget {
   const StaffHome({super.key});
   @override
@@ -20,23 +21,37 @@ class StaffHome extends StatefulWidget {
 
 class _StaffHomeState extends State<StaffHome> {
   Map? me;
-  List visits = [];
-  bool running = false, unknown = false, starting = false;
-  String err = '', ssid = '', permMsg = '', st = '', stB = '', stD = '', hint = '';
-  bool diagBusy = false, gpsOff = false;
-  int locAcc = 0, fixAt = 0;
+  bool running = false, locProblem = false, starting = false;
+  String permMsg = '';
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     FlutterForegroundTask.addTaskDataCallback(_onData);
+    _timer = Timer.periodic(const Duration(seconds: 15), (_) async {
+      final r = await FlutterForegroundTask.isRunningService;
+      if (mounted && r != running) setState(() => running = r);
+      if (!r && mounted && !starting) { _tryRestart(); } // the service stopped: quietly bring it back
+    });
     _boot();
   }
 
   @override
-  void dispose() { FlutterForegroundTask.removeTaskDataCallback(_onData); super.dispose(); }
+  void dispose() {
+    _timer?.cancel();
+    FlutterForegroundTask.removeTaskDataCallback(_onData);
+    super.dispose();
+  }
 
-  /// First time on this phone: walk the manager through the setup, then start tracking.
+  void _onData(Object d) {
+    if (d is Map && mounted) {
+      final bad = d['loc'] == true || d['gpsoff'] == true;
+      if (bad != locProblem) setState(() => locProblem = bad);
+    }
+  }
+
+  /// First time on this phone: walk the manager through the permissions once, then start tracking.
   Future<void> _boot() async {
     final p = await SharedPreferences.getInstance();
     if (p.getBool('guide_seen') != true) {
@@ -47,32 +62,17 @@ class _StaffHomeState extends State<StaffHome> {
     _load();
   }
 
-  void _onData(Object d) {
-    if (d is Map && mounted) {
-      setState(() { st = '${d['s'] ?? ''}'; stB = '${d['b'] ?? ''}'; stD = '${d['d'] ?? ''}'; unknown = d['loc'] == true; ssid = '${d['ssid'] ?? ''}'; gpsOff = d['gpsoff'] == true; locAcc = (d['acc'] as num?)?.toInt() ?? 0; fixAt = (d['fixat'] as num?)?.toInt() ?? 0; });
-      if (unknown || gpsOff) { _diagnose(); } else if (hint.isNotEmpty) { setState(() => hint = ''); }
-    }
+  /// Restarts the background service without any dialog (only if the manager already agreed and gave location permission).
+  Future<void> _tryRestart() async {
+    try {
+      final p = await SharedPreferences.getInstance();
+      if (p.getBool('disclosed2') != true || !(p.getString('cfg') ?? '').contains('"id"')) return;
+      if (!await Permission.locationWhenInUse.isGranted) return;
+      await startPresence();
+      if (mounted) setState(() => running = true);
+    } catch (_) {}
   }
 
-  /// Tells the manager exactly why the Wi-Fi name can't be read.
-  Future<void> _diagnose() async {
-    if (diagBusy) return;
-    diagBusy = true;
-    final perm = await Permission.locationWhenInUse.status.isGranted;
-    final gps = await Permission.locationWhenInUse.serviceStatus.isEnabled;
-    final always = await Permission.locationAlways.status.isGranted;
-    diagBusy = false;
-    if (!mounted) return;
-    setState(() => hint = !perm
-        ? 'Location permission band hai. Neeche button se App settings kholo > Permissions > Location > "Allow all the time" aur "Use precise location" on karo.'
-        : !gps
-            ? 'Phone ki Location (GPS) band hai. Screen ke upar se neeche kheench kar Location on karo. Bina Location ke Android Wi-Fi ka naam nahi dikhata.'
-            : !always
-                ? 'Location "Allow all the time" aur "Use precise location" karo (App settings > Permissions > Location).'
-                : 'Phone Wi-Fi se connected hona chahiye. Connected ho to Location precise on hai ya nahi check karo.');
-  }
-
-  /// Android can't switch GPS on silently; this shows the one-tap system dialog "Turn on location".
   Future<void> _ensureGps() async {
     try {
       final l = lc.Location();
@@ -83,24 +83,13 @@ class _StaffHomeState extends State<StaffHome> {
   Future<void> _load() async {
     running = await FlutterForegroundTask.isRunningService;
     final p = await SharedPreferences.getInstance();
-    if (me == null) {  // show the last known screen at once; fresh data replaces it a moment later
-      try {
-        final c1 = p.getString('me_cache'), c2 = p.getString('visits_cache');
-        if (c1 != null && mounted) setState(() { me = jsonDecode(c1) as Map; if (c2 != null) visits = jsonDecode(c2) as List; });
-      } catch (_) {}
-    }
     // Fast start: use the saved branch/Wi-Fi list so tracking begins before the server replies.
     if (!running && (p.getString('cfg') ?? '').contains('"id"')) { await _startService(); }
     final r = await Session.call('me');
-    final v = await Session.call('myVisits');
     running = await FlutterForegroundTask.isRunningService;
     if (!mounted) return;
-    setState(() {
-      if (r['ok'] == true) { me = r; err = ''; } else { err = '${r['error']}'; }
-      if (v['ok'] == true) visits = v['visits'];
-    });
-    if (r['ok'] == true) { await p.setString('me_cache', jsonEncode(r)); }
-    if (v['ok'] == true) { await p.setString('visits_cache', jsonEncode(v['visits'])); }
+    if (r['ok'] == true) { me = r; }
+    setState(() {});
     await _ensureTracking();
     if (running) _ensureGps();
   }
@@ -109,10 +98,10 @@ class _StaffHomeState extends State<StaffHome> {
     if (me == null) return;
     final branches = (me?['branches'] ?? []) as List;
     final p = await SharedPreferences.getInstance();
-    // Latest token + branch/Wi-Fi list is saved every time so the background service always has it.
+    // Latest token + branch / Wi-Fi list + company time are saved every time so the background service always has them.
     await p.setString('cfg', jsonEncode({'token': Session.token, 'work': me?['work'], 'branches': [for (final b in branches) {'id': b['id'], 'name': b['name'], 'wifi': b['wifi']}]}));
-    if (branches.isEmpty) { setState(() => permMsg = 'Owner ne abhi koi branch / Wi-Fi add nahi kiya.'); return; }
-    if (running) { setState(() => permMsg = ''); return; }
+    if (branches.isEmpty) { if (mounted) setState(() => permMsg = 'Owner ne abhi branch add nahi ki.'); return; }
+    if (running) { if (mounted) setState(() => permMsg = ''); return; }
     await _startService();
   }
 
@@ -146,29 +135,22 @@ class _StaffHomeState extends State<StaffHome> {
     starting = true;
     try {
       if (!await _disclosure()) {
-        if (mounted) setState(() => permMsg = 'Tracking ke liye "Agree" zaroori hai. Neeche button dabao.');
+        if (mounted) setState(() => permMsg = '"Agree" dabana zaroori hai.');
         return;
       }
       if (!await Permission.locationWhenInUse.request().isGranted) {
-        if (mounted) setState(() => permMsg = 'Location permission zaroori hai (Wi-Fi ka naam padhne ke liye). Neeche button dabao.');
+        if (mounted) setState(() => permMsg = 'Location permission zaroori hai.');
         return;
       }
       await _ensureGps();
       await Permission.notification.request();
-      await Permission.locationAlways.request(); // app band hone par bhi Wi-Fi naam padhne ke liye
+      await Permission.locationAlways.request(); // app band hone par bhi chalne ke liye
       await FlutterForegroundTask.requestIgnoreBatteryOptimization();
       await startPresence();
       if (mounted) setState(() { running = true; permMsg = ''; });
     } finally {
       starting = false;
     }
-  }
-
-  String get _where {
-    final bs = (me?['branches'] ?? []) as List;
-    final id = st == 'BRANCH' ? stB : '';
-    for (final b in bs) { if ('${b['id']}' == id) return '${b['name']}${'${b['city']}'.isEmpty ? '' : ', ${b['city']}'}'; }
-    return '';
   }
 
   /// Logout / stopping tracking needs the unlock PIN (the owner's PIN, or the manager's own password if none is set).
@@ -196,99 +178,39 @@ class _StaffHomeState extends State<StaffHome> {
     }
   }
 
-  String get _locText {
-    if (fixAt == 0) return 'Location: company time mein har 5 minute mein record hoti hai.';
-    final mins = ((DateTime.now().millisecondsSinceEpoch - fixAt) / 60000).round();
-    return 'Aakhri location: ±$locAcc m, $mins min pehle. (Company time mein har 5 minute mein record hoti hai.)';
-  }
-
-  String get _workText {
-    final w = me?['work'];
-    if (w is! Map || w['s'] == null || w['e'] == null) return '';
-    String hm(num m) => '${(m ~/ 60).toString().padLeft(2, '0')}:${(m % 60).toString().padLeft(2, '0')}';
-    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    final mask = (w['d'] as num?)?.toInt() ?? 127;
-    final days = mask == 127 ? 'roz' : [for (var i = 0; i < 7; i++) if (((mask >> i) & 1) == 1) names[i]].join(', ');
-    return 'Company time: ${hm(w['s'])} - ${hm(w['e'])} ($days). Is ke ilawa koi record nahi hota.';
-  }
-
-  Color get _heroColor => st == 'BRANCH' ? Colors.green : (st == 'NONET' || gpsOff) ? Colors.redAccent : st == 'OFFDUTY' ? Colors.blueGrey : Colors.orange;
-  IconData get _heroIcon => st == 'BRANCH' ? Icons.location_on : st == 'OFFDUTY' ? Icons.nightlight_round : st == 'MOBILE' ? Icons.signal_cellular_alt : st == 'NONET' ? Icons.wifi_off : st == 'OTHER' ? Icons.wifi : Icons.sync;
-
-  Widget _card(Widget child, {Color? color}) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: color ?? const Color(0xFF211F2B), borderRadius: BorderRadius.circular(20)),
-        child: child,
-      );
-
   @override
   Widget build(BuildContext c) {
-    final here = _where;
-    final col = _heroColor;
+    final ok = running;
     return Scaffold(
-      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [
-        IconButton(icon: const Icon(Icons.menu_book_outlined), tooltip: 'Setup guide', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen()))),
-        IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))),
-        IconButton(icon: const Icon(Icons.lock_outline), tooltip: 'Logout / Tracking band (PIN)', onPressed: () => _unlockAndLogout(c)),
-      ]),
-      body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
-        Text('Salam, ${Session.name}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
-        if (err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(err, style: const TextStyle(color: Colors.redAccent))),
-        const SizedBox(height: 14),
-        if (running) ...[
-          Container(
-            padding: const EdgeInsets.all(18),
-            margin: const EdgeInsets.only(bottom: 12),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: LinearGradient(colors: [col.withAlpha(110), col.withAlpha(30)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
-            child: Row(children: [
-              CircleAvatar(radius: 28, backgroundColor: col, child: Icon(_heroIcon, color: Colors.white, size: 30)),
-              const SizedBox(width: 14),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(st.isEmpty ? 'Check ho raha hai...' : st == 'BRANCH' ? 'Abhi: $here' : stLabel(st, detail: stD), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
-                if (ssid.isNotEmpty && !unknown) Padding(padding: const EdgeInsets.only(top: 2), child: Text('Wi-Fi: $ssid', style: const TextStyle(color: Colors.white70))),
-              ])),
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              GestureDetector(
+                onLongPress: () => _unlockAndLogout(c),
+                behavior: HitTestBehavior.opaque,
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(ok ? Icons.check_circle : Icons.pause_circle_outline, size: 104, color: ok ? Colors.green : Colors.orange),
+                  const SizedBox(height: 18),
+                  Text(ok ? 'Tracking active' : 'Tracking band hai', textAlign: TextAlign.center, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
+                  if (ok) const Padding(padding: EdgeInsets.only(top: 6), child: Text('Shukriya', style: TextStyle(fontSize: 20, color: Colors.grey))),
+                ]),
+              ),
+              if (!ok) ...[
+                if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(permMsg, textAlign: TextAlign.center, style: const TextStyle(color: Colors.orangeAccent))),
+                const SizedBox(height: 18),
+                FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo')),
+              ],
+              if (ok && locProblem) ...[
+                const SizedBox(height: 22),
+                const Text('Phone ki Location (GPS) on karo.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orangeAccent)),
+                TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
+              ],
             ]),
           ),
-          if (_workText.isNotEmpty) _card(Row(children: [const Icon(Icons.schedule, size: 20), const SizedBox(width: 10), Expanded(child: Text(_workText))])),
-          if (_locText.isNotEmpty) _card(Row(children: [const Icon(Icons.my_location, size: 20), const SizedBox(width: 10), Expanded(child: Text(_locText, style: const TextStyle(color: Colors.white70)))])),
-          if (unknown || gpsOff)
-            _card(
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(gpsOff ? 'Phone ki Location (GPS) band hai.' : 'Wi-Fi ka naam nahi mil raha.', style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w700)),
-                if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
-                Row(children: [
-                  TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
-                  TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
-                ]),
-              ]),
-              color: const Color(0xFF3A2A12),
-            ),
-          _card(const Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nWi-Fi, Location ya Data off karoge to owner ko record mein dikhega.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.white60))),
-        ] else ...[
-          _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('Tracking abhi band hai', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
-            if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
-            const SizedBox(height: 10),
-            FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
-            TextButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen())), child: const Text('Setup guide kholo')),
-          ])),
-        ],
-        const SizedBox(height: 8),
-        const Padding(padding: EdgeInsets.only(left: 4, bottom: 6), child: Text('Meri recent activity', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
-        _card(visits.isEmpty
-            ? const Text('Abhi koi activity nahi.')
-            : Column(children: [
-                for (final v in visits.take(30))
-                  ListTile(
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                    leading: Icon(v['state'] == 'BRANCH' ? Icons.location_on : Icons.circle, size: 18, color: v['state'] == 'BRANCH' ? Colors.green : Colors.orange),
-                    title: Text(v['state'] == 'BRANCH' ? '${v['branchName']}${'${v['city']}'.isEmpty ? '' : ', ${v['city']}'}' : stLabel(v['state'], detail: '${v['detail'] ?? ''}')),
-                    subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min'),
-                  ),
-              ])),
-      ])),
+        ),
+      ),
     );
   }
 }
