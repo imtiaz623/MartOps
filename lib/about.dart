@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'guide.dart';
 import 'help.dart';
 
-const kHelpline = '0306 9348405';
 const kDevName = 'Imtiaz Ali Qumbrani';
 const kDevEmail = 'imtiazalee02@gmail.com';
 const kPolicyUrl = 'https://imtiaz623.github.io/MartOps/privacy.html';
@@ -10,7 +10,7 @@ const kPolicyUrl = 'https://imtiaz623.github.io/MartOps/privacy.html';
 const kAbout = r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. During the company working time set by the owner, the app records which branch Wi-Fi the phone connects to, when the manager arrived and left, whether the phone was on another Wi-Fi, on mobile data, without internet or switched off, and the phone's GPS position. The owner sees this in the app and on the web panel, with reports and a map link for each position.''';
 
 const kPolicy = <List<String>>[
-  [r'''1. About this policy''', r'''This policy explains what information the MartOps app and its web panel collect, why, and what choices you have. MartOps is developed by Imtiaz Ali Qumbrani (imtiazalee02@gmail.com, help line 0306 9348405). Last updated: 26 October 2026.'''],
+  [r'''1. About this policy''', r'''This policy explains what information the MartOps app and its web panel collect, why, and what choices you have. MartOps is developed by Imtiaz Ali Qumbrani (imtiazalee02@gmail.com). Last updated: 26 October 2026.'''],
   [r'''2. What MartOps does''', r'''MartOps is a business app for shop and company owners. The owner adds branches and the Wi-Fi network names of each branch, then adds a manager. The manager logs in once on his Android phone. During the company working time set by the owner, the app records which branch Wi-Fi the phone connects to, when the manager arrived and left, whether the phone was on another Wi-Fi, on mobile data, without internet or switched off, and the phone's GPS position. The owner sees this in the app and on the web panel, with reports and a map link for each position.'''],
   [r'''3. Information we collect''', r'''Account details: company name, owner name, phone number, optional WhatsApp number for reports, manager names and optional phone numbers, and login IDs. Passwords and PINs are stored only in hashed form.
 
@@ -45,7 +45,7 @@ Inside a company, the owner can see all of his managers' records. A manager can 
 
 Email: imtiazalee02@gmail.com
 
-Help line: 0306 9348405'''],
+Help: imtiazalee02@gmail.com'''],
 ];
 
 class AboutScreen extends StatelessWidget {
@@ -69,14 +69,11 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const Text(kAbout),
             const SizedBox(height: 16),
-            _copy(c, 'Help line', kHelpline, Icons.call),
-            Row(children: [
-              Expanded(child: FilledButton.icon(onPressed: () => openWhatsApp(c), icon: const Icon(Icons.chat), label: const Text('WhatsApp par chat'))),
-              const SizedBox(width: 10),
-              Expanded(child: OutlinedButton.icon(onPressed: () => callHelp(c), icon: const Icon(Icons.call), label: const Text('Call'))),
-            ]),
+            FilledButton.icon(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen())), icon: const Icon(Icons.menu_book_outlined), label: const Text('Setup guide (step-by-step)')),
             const SizedBox(height: 8),
-            _copy(c, 'Email', kDevEmail, Icons.email_outlined),
+            OutlinedButton.icon(onPressed: () => openEmail(c), icon: const Icon(Icons.email_outlined), label: const Text('Help ke liye Email karo')),
+            const SizedBox(height: 8),
+            _copy(c, 'Help (Email)', kDevEmail, Icons.email_outlined),
             _copy(c, 'Developer', kDevName, Icons.person_outline),
             _copy(c, 'Privacy Policy (web)', kPolicyUrl, Icons.privacy_tip_outlined),
             const SizedBox(height: 8),
