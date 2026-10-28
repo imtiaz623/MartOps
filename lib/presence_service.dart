@@ -24,7 +24,7 @@ Future<void> startPresence() async {
         eventAction: ForegroundTaskEventAction.repeat(pingEvery.inMilliseconds), autoRunOnBoot: true, autoRunOnMyPackageReplaced: true, allowWifiLock: true),
   );
   await FlutterForegroundTask.startService(
-      serviceId: 301, notificationTitle: 'Branch visit tracking on', notificationText: 'Check ho raha hai', callback: startCallback);
+      serviceId: 301, notificationTitle: 'MartOps', notificationText: 'Tracking active', callback: startCallback);
 }
 
 // ---- company working time: {'s': start minute, 'e': end minute, 'd': day bit mask (Sun=1 ... Sat=64)}; null = always ----
@@ -200,7 +200,7 @@ class PresenceHandler extends TaskHandler {
       }
     }
 
-    final note = s == 'OFFDUTY' ? 'Company time nahi hai - tracking pause' : (s == 'LOCOFF' ? 'Wi-Fi ka naam nahi mil raha - Location (GPS) on karo' : 'Check ho raha hai');
+    final note = (s == 'LOCOFF' || gpsOff) ? 'Location (GPS) on karo' : 'Tracking active';
     if (lastNote != note) {
       lastNote = note;
       FlutterForegroundTask.updateService(notificationText: note);
