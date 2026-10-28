@@ -79,7 +79,7 @@ class Session {
 
   static Future<void> clear() async {
     final p = await SharedPreferences.getInstance();
-    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue'); await p.remove('tick'); await p.remove('lq');
+    await p.remove('session'); await p.remove('cfg'); await p.remove('cur'); await p.remove('queue'); await p.remove('tick'); await p.remove('lq'); await p.remove('owner_cache'); await p.remove('me_cache'); await p.remove('visits_cache');
     token = null; role = null;
   }
 
