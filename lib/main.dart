@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'payment.dart';
 import 'about.dart';
+import 'guide.dart';
+import 'help.dart';
 import 'staff.dart';
 
 void main() {
@@ -17,8 +21,14 @@ class MartOps extends StatelessWidget {
   Widget build(BuildContext c) => MaterialApp(
         title: 'MartOps',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData.dark(useMaterial3: true).copyWith(
-            colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF2B84B), brightness: Brightness.dark)),
+        theme: ThemeData(
+          useMaterial3: true,
+          brightness: Brightness.dark,
+          colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFFF2B84B), brightness: Brightness.dark),
+          scaffoldBackgroundColor: const Color(0xFF15131A),
+          filledButtonTheme: FilledButtonThemeData(style: FilledButton.styleFrom(minimumSize: const Size(64, 52), shape: const StadiumBorder())),
+          outlinedButtonTheme: OutlinedButtonThemeData(style: OutlinedButton.styleFrom(minimumSize: const Size(64, 52), shape: const StadiumBorder())),
+        ),
         home: const Boot(),
       );
 }
@@ -49,24 +59,34 @@ class Welcome extends StatelessWidget {
   const Welcome({super.key});
   @override
   Widget build(BuildContext c) => Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 380),
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text('MartOps', style: TextStyle(fontSize: 34, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  const Text('Manager branch visit tracking', style: TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 40),
-                  SizedBox(width: double.infinity, height: 52, child: FilledButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Register())), child: const Text('Register Company'))),
-                  const SizedBox(height: 12),
-                  SizedBox(width: double.infinity, height: 52, child: OutlinedButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Login())), child: const Text('Login'))),
-                  const SizedBox(height: 20),
-                  TextButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen())), child: const Text('About / Help / Privacy Policy')),
-                  const Text('Help line: '+kHelpline, style: TextStyle(color: Colors.grey)),
-                ]),
+        body: Container(
+          decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF22203A), Color(0xFF15131A)], begin: Alignment.topCenter, end: Alignment.bottomCenter)),
+          child: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 380),
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(32), gradient: const LinearGradient(colors: [Color(0xFFF2B84B), Color(0xFFE59A1E)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+                      child: const Icon(Icons.location_on, size: 62, color: Color(0xFF15131A)),
+                    ),
+                    const SizedBox(height: 22),
+                    const Text('MartOps', style: TextStyle(fontSize: 36, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    const Text('Manager branch visit tracking', style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 40),
+                    FilledButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Register())), child: const Text('Register Company')),
+                    const SizedBox(height: 12),
+                    OutlinedButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const Login())), child: const Text('Login')),
+                    const SizedBox(height: 16),
+                    TextButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen())), child: const Text('About / Setup guide / Privacy Policy')),
+                    const HelpBar(),
+                  ]),
+                ),
               ),
             ),
           ),
@@ -126,6 +146,7 @@ class _RegisterState extends State<Register> {
         if (err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err, style: const TextStyle(color: Colors.redAccent))),
         const SizedBox(height: 16),
         SizedBox(width: double.infinity, child: FilledButton(onPressed: busy ? null : _go, child: Text(busy ? 'Please wait...' : 'Register'))),
+        const HelpBar(),
       ]);
 
   Widget _success() => Column(children: [
@@ -203,6 +224,7 @@ class _LoginState extends State<Login> {
                   if (err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: Text(err, style: const TextStyle(color: Colors.redAccent))),
                   const SizedBox(height: 16),
                   SizedBox(width: double.infinity, child: FilledButton(onPressed: busy ? null : _go, child: Text(busy ? 'Please wait...' : 'Log in'))),
+                  const HelpBar(),
                 ]),
               ),
             ),
@@ -217,47 +239,115 @@ Future<void> logout(BuildContext c) async {
   if (c.mounted) Navigator.pushAndRemoveUntil(c, MaterialPageRoute(builder: (_) => const Welcome()), (_) => false);
 }
 
-class OwnerHome extends StatelessWidget {
+class OwnerHome extends StatefulWidget {
   const OwnerHome({super.key});
   @override
-  Widget build(BuildContext c) => Scaffold(
-        appBar: AppBar(title: Text(Session.companyName ?? 'Owner'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))), IconButton(icon: const Icon(Icons.payments_outlined), tooltip: 'Payment', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen()))), IconButton(icon: const Icon(Icons.logout), onPressed: () => logout(c))]),
-        body: FutureBuilder<Map>(
-          future: Session.call('dashboard'),
-          builder: (c, s) {
-            if (!s.hasData) return const Center(child: CircularProgressIndicator());
-            final d = s.data!;
-            if (d['ok'] != true) {
-              return Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(d['error'] == 'subscription_inactive' ? ({'PENDING': 'Payment verify ho rahi hai. Approve hote hi access khul jayega.', 'REJECTED': 'Payment reject ho gayi. Sahi TID dobara bhejo.'}[d['status']] ?? 'Subscription khatam / band hai. Payment karo.') : 'Network masla: ${d['error']}', textAlign: TextAlign.center),
-                  const SizedBox(height: 12),
-                  FilledButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen())), child: const Text('Payment')),
-                ]),
-              );
-            }
-            final st = (d['users'] as List).where((u) => u['role'] == 'staff').toList();
-            final names = {for (final b in d['branches'] as List) b['id']: '${b['name']}'};
-            final vis = (d['visits'] as List).take(20).toList();
-            return ListView(padding: const EdgeInsets.all(16), children: [
-              ListTile(title: Text('${st.length} manager, ${(d['branches'] as List).length} branches'), subtitle: Text('Branches, Wi-Fi aur managers web panel se manage karo:\n${d['company']['portalUrl']}')),
-              const Padding(padding: EdgeInsets.only(top: 8, left: 16), child: Text('Managers abhi', style: TextStyle(fontWeight: FontWeight.w600))),
+  State<OwnerHome> createState() => _OwnerHomeState();
+}
+
+class _OwnerHomeState extends State<OwnerHome> {
+  Map? d;
+
+  @override
+  void initState() {
+    super.initState();
+    _boot();
+  }
+
+  Future<void> _boot() async {
+    final p = await SharedPreferences.getInstance();
+    final cached = p.getString('owner_cache'); // last screen shows at once, fresh data replaces it
+    if (cached != null) { try { d = jsonDecode(cached) as Map; if (mounted) setState(() {}); } catch (_) {} }
+    if (p.getBool('guide_seen_owner') != true) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) { await Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen())); }
+      await p.setBool('guide_seen_owner', true);
+    }
+    _load();
+  }
+
+  Future<void> _load() async {
+    final r = await Session.call('dashboard');
+    if (!mounted) return;
+    setState(() => d = r);
+    if (r['ok'] == true) { final p = await SharedPreferences.getInstance(); await p.setString('owner_cache', jsonEncode(r)); }
+  }
+
+  Widget _card(Widget child) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: const Color(0xFF211F2B), borderRadius: BorderRadius.circular(20)),
+        child: child,
+      );
+
+  Widget _tile(String big, String small) => Expanded(
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(color: const Color(0xFF211F2B), borderRadius: BorderRadius.circular(20), border: const Border(left: BorderSide(color: Color(0xFFF2B84B), width: 4))),
+          child: Column(children: [Text(big, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800)), const SizedBox(height: 2), Text(small, style: const TextStyle(color: Colors.grey, fontSize: 12))]),
+        ),
+      );
+
+  Widget _body(BuildContext c) {
+    final r = d;
+    if (r == null) return const Center(child: CircularProgressIndicator());
+    if (r['ok'] != true) {
+      return ListView(padding: const EdgeInsets.all(24), children: [
+        const SizedBox(height: 60),
+        Text(r['error'] == 'subscription_inactive' ? ({'PENDING': 'Payment verify ho rahi hai. Approve hote hi access khul jayega.', 'REJECTED': 'Payment reject ho gayi. Sahi TID dobara bhejo.'}[r['status']] ?? 'Subscription khatam / band hai. Payment karo.') : 'Network masla: ${r['error']}', textAlign: TextAlign.center),
+        const SizedBox(height: 16),
+        FilledButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen())), child: const Text('Payment')),
+      ]);
+    }
+    final st = (r['users'] as List).where((u) => u['role'] == 'staff').toList();
+    final branches = r['branches'] as List;
+    final names = {for (final b in branches) b['id']: '${b['name']}'};
+    final vis = (r['visits'] as List).take(20).toList();
+    final atBranch = st.where((u) => u['status'] == 'CONNECTED').length;
+    return ListView(padding: const EdgeInsets.all(16), children: [
+      Row(children: [_tile('${st.length}', 'Managers'), _tile('$atBranch', 'At branch now'), _tile('${branches.length}', 'Branches')]),
+      const SizedBox(height: 14),
+      _card(Row(children: [
+        const Icon(Icons.language, size: 20),
+        const SizedBox(width: 10),
+        Expanded(child: Text('Branches, Wi-Fi, company time aur managers web panel se manage karo:\n${r['company']['portalUrl']}', style: const TextStyle(color: Colors.white70))),
+      ])),
+      const Padding(padding: EdgeInsets.only(left: 4, bottom: 6), child: Text('Managers abhi', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+      _card(st.isEmpty
+          ? const Text('Abhi koi manager nahi. Web panel ke Managers tab se add karo.')
+          : Column(children: [
               for (final u in st)
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.circle, size: 14, color: u['status'] == 'CONNECTED' ? Colors.green : (u['status'] == 'NO_SIGNAL' || u['status'] == 'NONET') ? Colors.redAccent : Colors.orange),
                   title: Text('${u['name']}'),
                   subtitle: Text(stLabel(u['status'], branch: '${names[u['branch']] ?? ''}', detail: '${u['detail'] ?? ''}')),
                 ),
-              const Padding(padding: EdgeInsets.only(top: 12, left: 16), child: Text('Recent activity', style: TextStyle(fontWeight: FontWeight.w600))),
+            ])),
+      const Padding(padding: EdgeInsets.only(left: 4, bottom: 6), child: Text('Recent activity', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+      _card(vis.isEmpty
+          ? const Text('Abhi koi activity nahi.')
+          : Column(children: [
               for (final v in vis)
                 ListTile(
                   dense: true,
+                  contentPadding: EdgeInsets.zero,
                   title: Text('${v['manager']} - ${v['state'] == 'BRANCH' ? v['branchName'] : stLabel(v['state'], detail: '${v['detail'] ?? ''}')}'),
                   subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi yahan)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min'),
                 ),
-              if (vis.isEmpty) const Padding(padding: EdgeInsets.all(16), child: Text('Abhi koi visit nahi.')),
-            ]);
-          },
-        ),
+            ])),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext c) => Scaffold(
+        appBar: AppBar(title: Text(Session.companyName ?? 'Owner'), actions: [
+          IconButton(icon: const Icon(Icons.menu_book_outlined), tooltip: 'Setup guide', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen()))),
+          IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))),
+          IconButton(icon: const Icon(Icons.payments_outlined), tooltip: 'Payment', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const PaymentScreen()))),
+          IconButton(icon: const Icon(Icons.logout), onPressed: () => logout(c)),
+        ]),
+        body: RefreshIndicator(onRefresh: _load, child: _body(c)),
       );
 }
