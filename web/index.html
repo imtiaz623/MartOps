@@ -27,7 +27,13 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 #m{position:fixed;inset:0;background:#000c;display:none;place-items:center;padding:16px;z-index:20}#m.on{display:grid}
 #m>div{background:var(--pn);border:1px solid var(--ln);border-radius:10px;padding:20px;max-width:440px;width:100%}
 .r{display:flex;gap:6px;margin-bottom:6px}.r input{flex:1}.wl{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0 8px;margin:6px 0}
-.btn{display:inline-block;padding:10px 16px;border:1px solid var(--bd2,#d9d9e3);border-radius:10px;text-decoration:none;color:inherit;font:inherit}.btn.p{background:#f2b84b;color:#1a1405;border-color:#f2b84b}.al li{margin:8px 0}\n.ft{text-align:center;color:var(--mu);font-size:13px;padding:22px 12px}.ft a{color:inherit}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 11px;border-radius:999px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.pill i{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.pill.g{background:rgba(63,185,80,.16);color:#2ea043}.pill.a{background:rgba(242,184,75,.2);color:#c98a00}.pill.x{background:rgba(139,155,171,.2);color:var(--mu)}
+.pill.live i{animation:plv 1.6s infinite}@keyframes plv{0%{box-shadow:0 0 0 0 rgba(63,185,80,.6)}70%{box-shadow:0 0 0 7px rgba(63,185,80,0)}100%{box-shadow:0 0 0 0 rgba(63,185,80,0)}}
+table.tl tr.g td:first-child{box-shadow:inset 4px 0 0 #3fb950}table.tl tr.a td:first-child{box-shadow:inset 4px 0 0 #f2b84b}table.tl tr.x td:first-child{box-shadow:inset 4px 0 0 #8b9bab}
+.path{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0;font-size:13px}.path .arrow{color:var(--mu)}.pn{font-weight:600}.sm{color:var(--mu);font-size:12.5px}
+.btn{display:inline-block;padding:10px 16px;border:1px solid var(--bd2,#d9d9e3);border-radius:10px;text-decoration:none;color:inherit;font:inherit}.btn.p{background:#f2b84b;color:#1a1405;border-color:#f2b84b}.al li{margin:8px 0}h3{font-size:16px;margin:16px 0 4px}.sg{border:1px solid var(--bd2,#d9d9e3);border-radius:14px;padding:14px 16px;background:linear-gradient(135deg,rgba(242,184,75,.14),transparent)}.sg .st{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-top:1px solid var(--bd2,#e3e3ea)}.sg .st:first-of-type{border-top:0}.sg .ck{width:22px;height:22px;border-radius:50%;border:2px solid #f2b84b;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px}.sg .ck.ok{background:#4caf50;border-color:#4caf50;color:#fff}.pb{height:8px;border-radius:8px;background:rgba(128,128,140,.25);overflow:hidden;margin:8px 0 6px}.pb i{display:block;height:100%;background:#f2b84b}\n.ft{text-align:center;color:var(--mu);font-size:13px;padding:22px 12px}.ft a{color:inherit}
 .err{color:var(--bd);min-height:1.4em;margin:6px 0 0}.hide{display:none!important}
 </style></head><body>
 <div id="auth"><section><h1 id="at">MartOps</h1><p id="ai" style="color:var(--mu)"></p>
@@ -40,9 +46,11 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <button id="th">Theme</button><button id="lo">Log out</button></header>
 <main><div class="bar"><span id="sub"></span><span style="flex:1"></span><span id="ref" style="color:var(--mu);font-size:13px"></span><button class="p" id="pay">Pay / renew</button></div>
 <div class="tabs" id="tabs"><button data-t="ov" class="on">Overview</button><button data-t="bn">Branches and Wi-Fi</button><button data-t="rx">Reports</button><button data-t="tm">Managers</button><button data-t="st">Settings</button><button data-t="ab">About / Help</button></div>
-<div id="t-ov"><div class="grid" id="kp"></div>
-<section style="margin-top:16px"><h2>Managers right now</h2><div class="sc"><table><thead><tr><th>Name</th><th>Branch</th><th>Since</th><th>Status</th><th>Last location</th></tr></thead><tbody id="sr"></tbody></table></div></section>
-<section style="margin-top:16px"><h2>Activity log</h2><div class="sc"><table><thead><tr><th>Name</th><th>Branch</th><th>Status</th><th>Connect time</th><th>Out-of-range time</th><th>Time diff</th></tr></thead><tbody id="lg"></tbody></table></div></section>
+<div id="t-ov"><section id="sg" class="hide" style="margin-bottom:16px"></section><div class="grid" id="kp"></div>
+<section style="margin-top:16px"><h2>Managers right now</h2><div class="sc"><table><thead><tr><th>Manager Name</th><th>Status</th><th>Branch / Place</th><th>Since</th><th>Exact location</th></tr></thead><tbody id="sr"></tbody></table></div></section>
+<section style="margin-top:16px"><div class="bar" style="border:0;padding:0;justify-content:space-between;gap:8px"><h2 style="margin:0">Activity timeline</h2><div class="bar" style="border:0;padding:0;gap:8px"><input type="date" id="tld"><select id="tlm"><option value="">All managers</option></select><button id="tlp">Export PDF</button><button id="tlx">Export Excel</button></div></div>
+<div id="tlpath" class="path"></div>
+<div class="sc"><table class="tl"><thead><tr><th>Manager Name</th><th>Current Status / Branch</th><th>Arrival Time</th><th>Departure Time</th><th>Total Stay</th><th>Map Link</th></tr></thead><tbody id="lg"></tbody></table></div></section>
 <section style="margin-top:16px"><h2>Today's visit report</h2><pre id="rpt">Loading...</pre></section></div>
 <div id="t-bn" class="hide"><section><div class="sc"><table><thead><tr><th>Branch</th><th>Location</th><th>Wi-Fi names</th><th></th></tr></thead><tbody id="bl2"></tbody></table></div>
 <h2 style="margin-top:14px" id="bh">Add a branch</h2><div class="f"><input id="nn" placeholder="Branch name"><input id="nc" placeholder="Location name (city / area)"></div>
@@ -78,8 +86,28 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <li><b>App band ya phone restart:</b> tracking khud chalti rehti hai, internet na ho to baad mein sync.</li>
 <li><b>Location:</b> company time mein har 5 minute mein manager ki GPS location (Google Maps link ke saath). Company time ke baad kuch record nahi.</li>
 <li><b>Backup:</b> chaho to visits aap ki apni Google Sheet mein bhi aati hain.</li></ul>
-<h2 style="margin-top:18px">Help</h2><p>Help line: <b>0306 9348405</b></p>
-<div class="bar" style="border:0;padding:0"><a class="btn p" href="https://wa.me/923069348405?text=MartOps%20help" target="_blank" rel="noopener">Chat on WhatsApp</a><a class="btn" href="tel:03069348405">Call help line</a></div>
+<h2 style="margin-top:18px">Step-by-step Guide</h2>
+<h3>Owner (web panel)</h3>
+<ol class="al"><li><b>Branch aur Wi-Fi:</b> "Branches and Wi-Fi" tab kholo. Branch ka naam, location ka naam aur us branch ke Wi-Fi ke naam likho. Wi-Fi ka naam bilkul waise likho jaise phone ki Wi-Fi list mein dikhta hai. Ek branch ke kai Wi-Fi ho sakte hain ("+ Add another Wi-Fi").</li>
+<li><b>Company time:</b> Settings mein start aur end time aur din chuno, phir Save. Sirf isi time mein record hota hai. Time set na karo to poora din record hoga.</li>
+<li><b>Manager add karo:</b> "Managers" tab mein naam likho. Manager ID aur PIN sirf ek baar dikhti hai, usay manager ko de do.</li>
+<li><b>Manager ka phone:</b> app install karke Company code, Manager ID aur PIN se login karwao (neeche dekho).</li>
+<li><b>Unlock PIN (zaroori nahi):</b> Settings mein PIN set karo, phir manager PIN ke baghair logout nahi kar sakta.</li>
+<li><b>Report:</b> "Reports" tab mein date chuno aur Excel, PDF, Text ya Image download karo.</li></ol>
+<h3>Manager (Android app)</h3>
+<ol class="al"><li>App kholo, <b>Login</b> dabao, Company code, Manager ID aur PIN likho.</li>
+<li>Jo notice aaye usay padh kar <b>Agree</b> dabao.</li>
+<li>Location permission mein <b>"Allow all the time"</b> aur <b>"Use precise location"</b> chuno.</li>
+<li>Phone ki <b>Location (GPS) on</b> rakho.</li>
+<li><b>Notifications</b> allow karo (tracking ka notification dikhta rahega).</li>
+<li>Settings > Apps > MartOps mein <b>Battery = Unrestricted</b> aur <b>Autostart = ON</b> karo.</li>
+<li>Bas. Ab app khud chalti hai, app band ho ya phone restart ho.</li></ol>
+<h3>Masle ka hal</h3>
+<ul class="al"><li><b>Wi-Fi ka naam nahi mil raha:</b> phone ki Location (GPS) on karo aur "Allow all the time" chuno.</li>
+<li><b>Branch par hai magar "Other Wi-Fi" dikha raha hai:</b> Wi-Fi ka naam branch mein galat likha hai. Edit karke theek karo.</li>
+<li><b>"No signal":</b> phone band hai, internet nahi hai ya app ko battery ne rok diya. Battery ko Unrestricted karo.</li></ul>
+<h2 style="margin-top:18px">Help</h2><p>Help: <b>imtiazalee02@gmail.com</b></p>
+<div class="bar" style="border:0;padding:0"><a class="btn p" href="mailto:imtiazalee02@gmail.com?subject=MartOps%20help">Email for help</a></div>
 <p class="mu" style="color:var(--mu);margin-top:14px">Developer: Imtiaz Ali Qumbrani &middot; imtiazalee02@gmail.com &middot; <a href="privacy.html">Privacy Policy</a> &middot; <a href="delete-account.html">Delete account</a></p>
 </section></div>
 </main></div>
@@ -88,7 +116,7 @@ pre{white-space:pre-wrap;margin:0;font:13px/1.55 ui-monospace,Menlo,monospace}
 <p>Send PKR 3,000 (monthly) or PKR 30,000 (yearly, you save PKR 6,000) to Easypaisa 03708431602, then enter the transaction ID. Access returns after verification.</p>
 <div class="f" style="grid-template-columns:1fr"><select id="pl"><option value="MONTHLY">Monthly - PKR 3,000</option><option value="YEARLY">Yearly - PKR 30,000</option></select><input id="tid" placeholder="Transaction ID (TID)"><button class="p" id="sd">Submit for verification</button><button id="cl">Close</button></div><p id="ms" style="color:var(--mu)"></p></div></div>
 
-<footer class="ft">Help line: <a href="tel:03069348405">0306 9348405</a> &middot; <a href="https://wa.me/923069348405?text=MartOps%20help" target="_blank" rel="noopener">WhatsApp</a> &middot; <a href="privacy.html">Privacy Policy</a> &middot; <a href="delete-account.html">Delete account</a> &middot; Imtiaz Ali Qumbrani</footer>
+<footer class="ft">Help: <a href="mailto:imtiazalee02@gmail.com">imtiazalee02@gmail.com</a> &middot; <a href="privacy.html">Privacy Policy</a> &middot; <a href="delete-account.html">Delete account</a> &middot; Imtiaz Ali Qumbrani</footer>
 <script>
 // 1) Deploy Code.gs as a Web App and paste its /exec URL here. 2) Host this file on Vercel as index.html.
 const API="PASTE_APPS_SCRIPT_EXEC_URL";
@@ -100,7 +128,7 @@ const T=ms=>ms?new Date(Number(ms)).toLocaleString("en-GB",{day:"2-digit",month:
 // ---- auth ----
 const slug=new URLSearchParams(location.search).get("company")||"";
 (async()=>{if(slug){$("lc").value=slug;const r=await api("companyInfo",{slug});if(r.ok){$("at").textContent=r.name;$("ai").textContent="Owner login for "+r.name;$("lc").value=r.code}}
-TK=ls.g("mo_t");if(TK){const r=await api("dashboard");if(r.ok){D=r;show()}else if(r.error==="subscription_inactive"){D=null;enter();lock(r.status)}else{TK="";ls.s("mo_t","")}}})();
+TK=ls.g("mo_t");if(TK){try{const c=JSON.parse(ls.g("mo_dash")||"null");if(c&&c.ok){D=c;show()}}catch(e){}const r=await api("dashboard");if(r.ok){D=r;show();ls.s("mo_dash",JSON.stringify(r))}else if(r.error==="subscription_inactive"){D=null;enter();lock(r.status)}else{TK="";ls.s("mo_t","");ls.s("mo_dash","")}}})();
 $("tl").onclick=()=>{$("fl").classList.remove("hide");$("fr").classList.add("hide");$("tl").classList.add("on");$("tr").classList.remove("on")};
 $("tr").onclick=()=>{$("fr").classList.remove("hide");$("fl").classList.add("hide");$("tr").classList.add("on");$("tl").classList.remove("on")};
 $("bl").onclick=async()=>{$("ae").textContent="";const r=await api("login",{company:$("lc").value.trim(),userId:$("lu").value.trim(),password:$("lp").value});
@@ -109,10 +137,10 @@ $("rg").onclick=async()=>{$("ae").textContent="";const r=await api("register",{c
 if(!r.ok)return $("ae").textContent=r.error;TK=r.token;ls.s("mo_t",TK);$("ar").innerHTML="Company code: <b>"+E(r.code)+"</b><br>Your portal: "+E(r.portalUrl);setTimeout(boot,2500)};
 async function boot(){const r=await api("dashboard");if(r.ok){D=r;show()}else if(r.error==="subscription_inactive"){enter();lock(r.status)}else $("ae").textContent=r.error}
 function enter(){$("auth").classList.add("hide");$("app").classList.remove("hide")}
-$("lo").onclick=()=>{ls.s("mo_t","");location.reload()};
+$("lo").onclick=()=>{ls.s("mo_t","");ls.s("mo_dash","");location.reload()};
 // ---- render ----
 function show(){enter();const c=D.company;wl([]);$("cn").textContent=c.name;$("ci").innerHTML="Company code: <b>"+E(c.code)+"</b> (managers use this in the app)<br>Portal: "+E(c.portalUrl);
-$("bu").value=c.backupUrl;$("bsh").textContent=c.shareWith?"Backup ke liye apni Google Sheet ko is email par Editor share karo: "+c.shareWith+". Phir uska link upar paste karke Save dabao. Branch visits wahan khud aati rahengi.":"";$("wn").value=c.wa;fillWork(c.work);$("lpm").style.color="var(--mu)";$("lpm").textContent=D.company.lockPinSet?"Unlock PIN set hai.":"Unlock PIN abhi set nahi.";draw();subBar();loadReport()}
+$("bu").value=c.backupUrl;$("bsh").textContent=c.shareWith?"Backup ke liye apni Google Sheet ko is email par Editor share karo: "+c.shareWith+". Phir uska link upar paste karke Save dabao. Branch visits wahan khud aati rahengi.":"";$("wn").value=c.wa;fillWork(c.work);$("lpm").style.color="var(--mu)";$("lpm").textContent=D.company.lockPinSet?"Unlock PIN set hai.":"Unlock PIN abhi set nahi.";draw();subBar();loadReport();loadTimeline()}
 function subBar(){const s=D.sub,d=s.trialEnd?Math.max(0,Math.ceil((s.trialEnd-Date.now())/864e5)):s.validUntil?Math.ceil((s.validUntil-Date.now())/864e5):0;
 $("sub").innerHTML=s.status==="ACTIVE"?`<span class="b ok">Active</span> ${d} days left`:`<span class="b wa">Trial</span> ${d} days left`}
 function lock(st){const M={PENDING:"Payment verification pending",REJECTED:"Payment rejected - send the correct TID",EXPIRED:"Plan expired - renew"};$("sub").innerHTML='<span class="b bd">Locked</span> '+(M[st]||"Payment needed");$("m").classList.add("on");$("cl").classList.add("hide")}
@@ -123,16 +151,34 @@ const badge=m=>{const x={CONNECTED:["ok","At branch"],OTHER:["wa","Other Wi-Fi"+
 const locCell=l=>{if(!l)return"";const ago=Math.max(0,Math.round((Date.now()-l.at)/6e4)),when=ago<1?"now":ago<90?ago+" min ago":T(l.at);
 if(l.lat==null)return E(l.note||"No location")+" ("+when+")";
 return`<a href="${mapU(l)}" target="_blank" rel="noopener">Open map</a> <span style="color:var(--mu)">+/-${l.acc}m, ${when}</span>`+(l.mock?' <span class="b bd">Fake GPS?</span>':"")};
+const goTab=t=>{const b=document.querySelector('#tabs [data-t="'+t+'"]');if(b)b.click()};
+function setupCard(){const el=$("sg"),c=D.company,ms=D.users.filter(u=>u.role==="staff");
+const st=[{ok:D.branches.length>0,t:"1. Branch aur Wi-Fi add karo",d:"Branches and Wi-Fi tab mein branch ka naam aur uske Wi-Fi ke naam likho (bilkul waise jaise phone mein dikhte hain).",tab:"bn",b:"Branch add karo"},
+{ok:!!c.work,t:"2. Company time set karo",d:"Settings mein start aur end time chuno. Sirf isi time mein record hoga (set na karo to poora din).",tab:"st",b:"Time set karo"},
+{ok:ms.length>0,t:"3. Manager add karo",d:"Managers tab mein manager ka naam likho. Manager ID aur PIN milegi.",tab:"tm",b:"Manager add karo"},
+{ok:ms.some(m=>m.status!=="NO_DATA"),t:"4. Manager ke phone mein app chalao",d:"APK install karo, Company code "+c.code+" aur Manager ID + PIN se login karo, phir app jo permissions maange wo do.",tab:"ab",b:"Guide kholo"},
+{ok:!!c.lockPinSet,t:"5. Unlock PIN (zaroori nahi)",d:"Settings mein PIN set karo taake manager PIN ke baghair logout na kar sake.",tab:"st",b:"PIN set karo",opt:1}];
+const req=st.filter(x=>!x.opt),done=req.filter(x=>x.ok).length;
+el.classList.toggle("hide",done===req.length);if(done===req.length)return;
+const next=st.findIndex(x=>!x.ok&&!x.opt);
+el.innerHTML='<div class="sg"><b>Setup guide</b> <span style="color:var(--mu)">('+done+" / "+req.length+' complete)</span><div class="pb"><i style="width:'+Math.round(done*100/req.length)+'%"></i></div>'+
+st.map((x,i)=>`<div class="st"><div class="ck ${x.ok?"ok":""}">${x.ok?"&#10003;":""}</div><div style="flex:1"><b>${E(x.t)}</b>${x.ok?"":`<div style="color:var(--mu);font-size:14px">${E(x.d)}</div>`}</div>${x.ok?"":`<button class="${i===next?"p":""}" data-go="${x.tab}">${E(x.b)}</button>`}</div>`).join("")+"</div>"}
+document.addEventListener("click",e=>{const g=e.target.dataset&&e.target.dataset.go;if(g)goTab(g)});
+const CLS={BRANCH:"g",CONNECTED:"g",OTHER:"a",MOBILE:"a",LOCOFF:"a",NONET:"x",OFF:"x",NO_SIGNAL:"x",OFFDUTY:"x",NO_DATA:"x"};
+const BT={g:"At Branch",a:"In Transit / Other Wi-Fi",x:"Offline / Phone Off"};
+const pill=(c,t,live)=>`<span class="pill ${c}${live?" live":""}"><i></i>${E(t)}</span>`;
+const placeOf=v=>v.state==="BRANCH"?(v.branchName||"")+(v.city?" ("+v.city+")":""):({OTHER:"Other Wi-Fi"+(v.detail?": "+v.detail:""),MOBILE:"Mobile data (Wi-Fi off / disconnected)",LOCOFF:"Wi-Fi connected, Location off",NONET:"No internet (Wi-Fi and data off)",OFF:"Phone off / app stopped"}[v.state]||v.state);
+const livePlace=m=>({CONNECTED:bn(m.branch),OTHER:"Other Wi-Fi"+(m.detail?": "+m.detail:""),MOBILE:"Mobile data (Wi-Fi off / disconnected)",LOCOFF:"Wi-Fi connected, Location off",NONET:"No internet (Wi-Fi and data off)",NO_SIGNAL:"No signal: phone off / no internet / app stopped",OFFDUTY:"Off duty (outside company time)",NO_DATA:"Tracking not started"}[m.status]||"");
 const NOTB=["OTHER","MOBILE","NONET","LOCOFF"];
 function draw(){const ms=D.users.filter(u=>u.role==="staff"),d0=new Date().setHours(0,0,0,0),vt=D.visits.filter(v=>Number(v.arrived)>=d0&&v.state==="BRANCH");
 $("kp").innerHTML=[[ms.length,"Managers"],[ms.filter(m=>m.status==="CONNECTED").length,"At a branch now"],[ms.filter(m=>NOTB.includes(m.status)).length,"Not at a branch"],[ms.filter(m=>m.status==="NO_SIGNAL").length,"No signal"],[vt.length,"Branch visits today"]].map(k=>`<div class="k"><b>${k[0]}</b><span>${k[1]}</span></div>`).join("");
-$("sr").innerHTML=ms.map(m=>`<tr><td>${E(m.name)}</td><td>${E(m.status==="CONNECTED"?bn(m.branch):"")}</td><td>${m.status==="NO_SIGNAL"?"last seen "+T(m.lastSeen):m.since?T(m.since):""}</td><td>${badge(m)}</td><td>${locCell(m.loc)}</td></tr>`).join("")||'<tr><td colspan=5>No managers yet. Add one in the Managers tab.</td></tr>';
-$("lg").innerHTML=D.visits.map(v=>`<tr><td>${E(v.manager)}</td><td>${E(v.branchName)}${v.city?" ("+E(v.city)+")":""}</td><td>${E(slabel(v))}</td><td>${T(v.arrived)}</td><td>${v.left?T(v.left):'<span class="b ok">Now</span>'}</td><td>${v.left?hm(Number(v.minutes)||0):"running"}</td></tr>`).join("")||'<tr><td colspan=6>No activity yet.</td></tr>';
+$("sr").innerHTML=ms.map(m=>{const c=CLS[m.status]||"x";return`<tr><td class="pn">${E(m.name)}</td><td>${pill(c,BT[c],m.status==="CONNECTED")}</td><td>${E(livePlace(m))}</td><td>${m.status==="NO_SIGNAL"?"last seen "+T(m.lastSeen):m.since&&m.status!=="OFFDUTY"?T(m.since):""}</td><td>${locCell(m.loc)}</td></tr>`}).join("")||'<tr><td colspan=5>No managers yet. Add one in the Managers tab.</td></tr>';
+fillTlm();
 $("bl2").innerHTML=D.branches.map(b=>`<tr><td>${E(b.name)}</td><td>${E(b.city)}</td><td>${b.wifi.map(w=>`<span class="b ok">${E(w)}</span>`).join(" ")}</td><td><button data-e="${E(b.id)}">Edit</button> <button class="x" data-d="${E(b.id)}">Remove</button></td></tr>`).join("")||'<tr><td colspan=4>Add your first branch.</td></tr>';
 $("cp").innerHTML=D.users.filter(u=>u.role==="staff").map(u=>`<tr><td>${E(u.userId)}</td><td>${E(u.name)}</td><td>${E(u.phone)}</td><td><button data-r="${E(u.userId)}">Reset PIN</button> <button class="x" data-x="${E(u.userId)}">Remove</button></td></tr>`).join("")||'<tr><td colspan=4>No managers yet.</td></tr>';
-fillRp();$("ref").textContent="Updated "+new Date().toLocaleTimeString()}
+setupCard();fillRp();$("ref").textContent="Updated "+new Date().toLocaleTimeString()}
 async function loadReport(){const r=await api("report");$("rpt").textContent=r.ok?r.text:"Unavailable"}
-async function refresh(){const r=await api("dashboard");if(r.ok){D=r;draw();subBar()}else if(r.error==="subscription_inactive")lock(r.status)}
+async function refresh(){const r=await api("dashboard");if(r.ok){D=r;draw();subBar();ls.s("mo_dash",JSON.stringify(r))}else if(r.error==="subscription_inactive")lock(r.status)}
 setInterval(()=>{if(D&&!document.hidden)refresh()},30000);
 $("tabs").onclick=e=>{const t=e.target.dataset.t;if(!t)return;[...$("tabs").children].forEach(b=>b.classList.toggle("on",b===e.target));["ov","bn","rx","tm","st","ab"].forEach(k=>$("t-"+k).classList.toggle("hide",k!==t));if(t==="rx"&&!RP)rangeBtn("today")};
 $("th").onclick=()=>{const r=document.documentElement;r.dataset.theme=r.dataset.theme=="light"?"dark":"light"};
@@ -168,6 +214,77 @@ $("pay").onclick=()=>{$("m").classList.add("on")};$("cl").onclick=()=>$("m").cla
 $("sd").onclick=async()=>{const t=$("tid").value.trim();if(!t)return $("ms").textContent="Enter the transaction ID.";
 const r=await api("pay",{plan:$("pl").value,tid:t});$("ms").textContent=r.ok?"Sent. Access returns when your payment is verified; this page checks every minute.":r.error;
 if(r.ok)setInterval(async()=>{const b=await api("dashboard");if(b.ok)location.reload()},60000)};
+// ---- activity timeline ----
+let TL=null,TLR=[];
+function fillTlm(){const m=$("tlm"),sig=JSON.stringify(D.users.map(u=>u.userId+u.name));if(fillTlm.sig===sig)return;fillTlm.sig=sig;const v=m.value;
+m.innerHTML='<option value="">All managers</option>'+D.users.filter(u=>u.role==="staff").map(u=>`<option value="${E(u.userId)}">${E(u.name)}</option>`).join("");m.value=v}
+function tidy(rows){const by={},out=[],now=Date.now();rows.forEach(v=>(by[v.manager]=by[v.manager]||[]).push({...v}));
+const mins=v=>v.left?Math.round((v.left-v.arrived)/6e4):Math.max(0,Math.round((now-v.arrived)/6e4));
+Object.keys(by).sort().forEach(m=>{let a=by[m].sort((x,y)=>x.arrived-y.arrived).filter(v=>!v.left||v.left-v.arrived>=30000);
+for(let i=1;i<a.length-1;i++){const p=a[i-1],c=a[i],n=a[i+1];
+if(p.state==="BRANCH"&&n.state==="BRANCH"&&p.branch===n.branch&&c.state!=="BRANCH"&&c.left&&c.left-c.arrived<120000){p.left=n.left;a.splice(i,2);i--}}
+const b=[];a.forEach(v=>{const l=b[b.length-1];
+if(l&&l.state===v.state&&l.branch===v.branch&&(l.detail||"")===(v.detail||"")&&l.left&&v.arrived-l.left<=120000)l.left=v.left;else b.push(v)});
+b.forEach(v=>{v.minutes=mins(v);out.push(v)})});return out}
+async function loadTimeline(){if(!D)return;const d=$("tld").value||ymd(new Date());$("tld").value=d;
+const from=new Date(d+"T00:00:00").getTime(),r=await api("visitReport",{from,to:from+864e5,manager:$("tlm").value,branch:""});
+if(!r.ok)return;TL=r;paintTimeline()}
+function paintTimeline(){const rows=tidy(TL.rows||[]);TLR=rows;
+$("lg").innerHTML=rows.map(v=>{const c=CLS[v.state]||"x",w=whereC(v.loc);
+return`<tr class="${c}"><td class="pn">${E(v.manager)}</td><td>${pill(c,BT[c],c==="g"&&!v.left)}<div style="margin-top:4px">${E(placeOf(v))}</div></td><td>${T(v.arrived)}</td><td>${v.left?T(v.left):'<span class="pill g live"><i></i>Now</span>'}</td><td><b>${hm(v.minutes)}</b>${v.left?"":' <span class="sm">(running)</span>'}</td><td>${w&&w.u?`<a href="${E(w.u)}" target="_blank" rel="noopener">Open map</a><div class="sm">${E(w.t)}</div>`:'<span class="sm">-</span>'}</td></tr>`}).join("")||'<tr><td colspan="6">No activity on this day.</td></tr>';
+$("tlpath").innerHTML=$("tlm").value?rows.map(v=>{const c=CLS[v.state]||"x";return`<span class="pill ${c}"><i></i>${E(placeOf(v))} ${tstr(v.arrived)}&ndash;${v.left?tstr(v.left):"now"}</span>`}).join('<span class="arrow">&rarr;</span>'):""}
+function timelineReport(){const rows=TLR,day=$("tld").value,now=Date.now(),sel=$("tlm").selectedOptions[0]?$("tlm").selectedOptions[0].text:"All managers",cls=[];
+const body=rows.map(v=>{const c=CLS[v.state]||"x",m=whereC(v.loc);cls.push(c);
+return[v.manager,BT[c]+" - "+placeOf(v),dstr(v.arrived)+" "+tstr(v.arrived),v.left?dstr(v.left)+" "+tstr(v.left):"Now",hm(v.minutes)+(v.left?"":" (running)"),m&&m.u?m:"-"]});
+const g={};rows.forEach(v=>{const o=g[v.manager]||(g[v.manager]={g:0,a:0,x:0,n:0});const c=CLS[v.state]||"x";o[c]+=v.minutes;if(c==="g")o.n++});
+return{xTitle:"MartOps Manager Activity & Movement Log",title:(D.company.name||"MartOps")+" - Manager Activity & Movement Log",sub:"Date: "+day+"  |  Manager: "+sel,gen:"Generated "+dstr(now)+" "+tstr(now)+"  |  MartOps",
+companyId:D.company.code,managerLabel:sel,genAt:dstr(now)+" "+tstr(now),from:day,to:day,
+head:["Manager Name","Current Status / Branch","Arrival Time","Departure Time","Total Stay","Map Link"],body,cls,statusCol:1,
+widths:[200,500,190,190,130,200],aligns:["l","l","l","l","r","l"],
+sumHead:["Manager Name","Time at branch","In transit / other Wi-Fi","Offline / phone off","Branch visits"],
+sum:Object.keys(g).sort().map(k=>[k,hm(g[k].g),hm(g[k].a),hm(g[k].x),g[k].n]),sumWidths:[300,200,260,260,160],sumAligns:["l","r","r","r","r"],kpis:[["Rows",body.length]],visits:body.length}}
+// ---- branded exports: jsPDF + autoTable and ExcelJS (loaded from cdnjs when needed), with built-in fallbacks ----
+const need=u=>new Promise((res,rej)=>{need.c=need.c||{};if(need.c[u])return res();const s=document.createElement("script");s.src=u;s.onload=()=>{need.c[u]=1;res()};s.onerror=()=>rej(new Error("load "+u));document.head.appendChild(s)});
+const NAVY=[11,30,66],GOLD=[242,184,75],CL={g:[[226,244,228],[27,120,52]],a:[[255,240,204],[160,100,0]],x:[[233,236,241],[96,104,120]]};
+async function exportPdf(r,name){try{
+await need("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");await need("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js");
+const doc=new window.jspdf.jsPDF({orientation:"landscape",unit:"pt",format:"a4"}),W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=36;
+const band=()=>{doc.setFillColor(...NAVY);doc.rect(0,0,W,72,"F");doc.setFillColor(...GOLD);doc.roundedRect(M,15,42,42,10,10,"F");doc.setFillColor(...NAVY);doc.circle(M+21,32,9,"F");doc.triangle(M+12.5,36,M+29.5,36,M+21,51,"F");doc.setFillColor(...GOLD);doc.circle(M+21,32,3.6,"F");
+doc.setTextColor(255,255,255);doc.setFont("helvetica","bold");doc.setFontSize(21);doc.text("MartOps",M+54,36);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(...GOLD);doc.text("Branch visits & live location",M+54,52);
+doc.setTextColor(255,255,255);doc.setFontSize(9);doc.text(["Company ID: "+(r.companyId||"-"),"Generated: "+(r.genAt||"-"),"Manager: "+(r.managerLabel||"All managers")],W-M,26,{align:"right"})};
+band();doc.setFont("helvetica","bold");doc.setFontSize(14);doc.setTextColor(...NAVY);doc.text(r.xTitle||r.title,M,96);doc.setFont("helvetica","normal");doc.setFontSize(9);doc.setTextColor(90,98,112);doc.text(r.sub||"",M,111);
+const sc=(W-2*M)/r.widths.reduce((a,b)=>a+b,0),cs={};r.widths.forEach((x,i)=>cs[i]={cellWidth:x*sc,halign:r.aligns[i]==="r"?"right":"left"});
+const common={theme:"grid",styles:{fontSize:8.5,cellPadding:5,lineColor:[225,228,236],lineWidth:.5,textColor:[30,36,50],valign:"middle"},headStyles:{fillColor:NAVY,textColor:GOLD,fontStyle:"bold"},alternateRowStyles:{fillColor:[246,248,252]},margin:{top:84,left:M,right:M,bottom:40},didDrawPage:band};
+doc.autoTable({...common,head:[r.head.map(String)],body:r.body.map(x=>x.map(cv)),startY:124,columnStyles:cs,
+didParseCell:d=>{if(d.section!=="body")return;const raw=r.body[d.row.index][d.column.index];
+if(r.cls&&d.column.index===r.statusCol){const P=CL[r.cls[d.row.index]];if(P){d.cell.styles.fillColor=P[0];d.cell.styles.textColor=P[1];d.cell.styles.fontStyle="bold"}}
+if(raw&&typeof raw==="object"&&raw.u)d.cell.styles.textColor=[11,80,200]},
+didDrawCell:d=>{if(d.section!=="body")return;const raw=r.body[d.row.index][d.column.index];if(raw&&typeof raw==="object"&&raw.u)doc.link(d.cell.x,d.cell.y,d.cell.width,d.cell.height,{url:raw.u})}});
+if(r.sum&&r.sum.length){const y=doc.lastAutoTable.finalY+26;doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...NAVY);doc.text("Summary",M,y);
+const sw=(W-2*M)/r.sumWidths.reduce((a,b)=>a+b,0),sc2={};r.sumWidths.forEach((x,i)=>sc2[i]={cellWidth:x*sw,halign:r.sumAligns[i]==="r"?"right":"left"});
+doc.autoTable({...common,head:[r.sumHead.map(String)],body:r.sum.map(x=>x.map(cv)),startY:y+8,columnStyles:sc2})}
+const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setDrawColor(...GOLD);doc.setLineWidth(1);doc.line(M,H-30,W-M,H-30);doc.setFont("helvetica","normal");doc.setFontSize(8);doc.setTextColor(110,118,132);doc.text("MartOps  |  "+(r.xTitle||r.title),M,H-16);doc.text("Page "+i+" of "+n,W-M,H-16,{align:"right"})}
+save(doc.output("blob"),name)}catch(e){console.warn("jsPDF failed, using built-in PDF",e);save(toPdf(renderPages(r)),name)}}
+async function exportXlsx(r,name){try{
+await need("https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js");
+const wb=new ExcelJS.Workbook();wb.creator="MartOps";wb.created=new Date();
+const argb=a=>"FF"+a.map(x=>x.toString(16).padStart(2,"0")).join("").toUpperCase(),thin={style:"thin",color:{argb:"FFD5DAE3"}},bd={top:thin,left:thin,bottom:thin,right:thin};
+const sheet=(nm,head,rows,widths,aligns,cls,statusCol,top)=>{const ws=wb.addWorksheet(nm),n=head.length;let rw=1;
+if(top){ws.mergeCells(1,1,1,n);const t=ws.getCell(1,1);t.value=r.xTitle||r.title;t.font={name:"Calibri",size:16,bold:true,color:{argb:argb(GOLD)}};t.fill={type:"pattern",pattern:"solid",fgColor:{argb:argb(NAVY)}};t.alignment={vertical:"middle"};ws.getRow(1).height=32;
+ws.mergeCells(2,1,2,n);const m=ws.getCell(2,1);m.value="Company ID: "+(r.companyId||"-")+"     Generated: "+(r.genAt||"-")+"     Manager: "+(r.managerLabel||"All managers");m.font={name:"Calibri",size:10,color:{argb:"FF4A5568"}};m.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFEEF1F7"}};
+ws.mergeCells(3,1,3,n);ws.getCell(3,1).value=r.sub||"";ws.getCell(3,1).font={name:"Calibri",size:10,italic:true,color:{argb:"FF4A5568"}};rw=5}
+const hr=ws.getRow(rw);head.forEach((h,i)=>{const c=hr.getCell(i+1);c.value=String(h);c.font={name:"Calibri",bold:true,color:{argb:argb(GOLD)}};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:argb(NAVY)}};c.alignment={vertical:"middle",horizontal:aligns[i]==="r"?"right":"left"};c.border=bd});hr.height=22;
+rows.forEach((row,ri)=>{const xr=ws.getRow(rw+1+ri);row.forEach((v,ci)=>{const c=xr.getCell(ci+1);
+if(v&&typeof v==="object"&&v.u){c.value={text:v.t,hyperlink:v.u};c.font={name:"Calibri",color:{argb:"FF0B50C8"},underline:true}}else{c.value=v&&typeof v==="object"?v.t:v;c.font={name:"Calibri"}}
+c.border=bd;c.alignment={vertical:"middle",horizontal:aligns[ci]==="r"?"right":"left",wrapText:true};
+if(cls&&ci===statusCol){const P=CL[cls[ri]];if(P){c.fill={type:"pattern",pattern:"solid",fgColor:{argb:argb(P[0])}};c.font={name:"Calibri",bold:true,color:{argb:argb(P[1])}}}}
+else if(ri%2)c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF6F8FC"}}})});
+widths.forEach((x,i)=>ws.getColumn(i+1).width=Math.max(8,Math.round(x/8.5)));
+ws.views=[{state:"frozen",ySplit:rw}];ws.autoFilter={from:{row:rw,column:1},to:{row:rw+rows.length,column:n}}};
+sheet("Activity",r.head.map(String),r.body,r.widths,r.aligns,r.cls,r.statusCol,true);
+if(r.sum&&r.sum.length)sheet("Summary",r.sumHead.map(String),r.sum,r.sumWidths,r.sumAligns,null,-1,true);
+const buf=await wb.xlsx.writeBuffer();save(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),name)}
+catch(e){console.warn("ExcelJS failed, using built-in Excel",e);save(toXlsx(r),name)}}
 // ---- reports (Excel / PDF / Text / Image) ----
 const pad=n=>String(n).padStart(2,"0"),MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 const dstr=ms=>{const d=new Date(Number(ms));return pad(d.getDate())+"-"+MON[d.getMonth()]+"-"+d.getFullYear()};
@@ -239,6 +356,7 @@ r.widths=[130,170,240,330,110,170,110,80,250];r.aligns=["l","l","l","l","l","l",
 const g={};rows.forEach(v=>{const isB=v.state==="BRANCH",k=v.manager+"|"+(isB?v.branch:"")+"|"+v.state,o=g[k]||(g[k]={m:v.manager,b:isB?nb(v.branchName,v.city):"-",s:SL[v.state]||v.state,n:0,t:0});o.n++;o.t+=Number(v.minutes)||0});
 r.sumHead=["Name","Branch","Status","Count","Time diff","Minutes"];
 r.sum=Object.values(g).sort((a,b)=>a.m.localeCompare(b.m)||(a.b==="-")-(b.b==="-")||b.t-a.t).map(x=>[x.m,x.b,x.s,x.n,hm(x.t),x.t]);r.sumWidths=[260,330,420,120,200,120];r.sumAligns=["l","l","l","r","r","r"]}
+r.companyId=D.company.code;r.managerLabel=sel("rm");r.genAt=dstr(Date.now())+" "+tstr(Date.now());r.xTitle="MartOps "+({abs:"Out-of-range Report",visit:"Branch Visits Report",all:"Full Activity Report",loc:"Location History"}[mode]);
 r.visits=r.body.length;return r}
 function paintReport(){const r=RP,th=a=>"<tr>"+a.map(h=>`<th>${E(h)}</th>`).join("")+"</tr>",td=a=>"<tr>"+a.map(c=>`<td>${cellHtml(c)}</td>`).join("")+"</tr>";
 $("rk").innerHTML=r.kpis.map(k=>`<div class="k"><b>${E(k[0])}</b><span>${k[1]}</span></div>`).join("");
@@ -263,19 +381,19 @@ const cl=cen.reduce((a,c)=>a+c.length,0);
 return new Blob([...parts,...cen,new Uint8Array([0x50,0x4b,5,6,...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cl),...u32(off),...u16(0)])],{type})}
 const X=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g,"");
 const colL=i=>{let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26)}return s};
-function sheetXml(rows,bold,widths){const R=rows.map((row,ri)=>`<row r="${ri+1}">`+row.map((v,ci)=>{const ref=colL(ci)+(ri+1),st=bold.includes(ri)?' s="1"':"";
+function sheetXml(rows,bold,widths,title){const R=rows.map((row,ri)=>`<row r="${ri+1}">`+row.map((v,ci)=>{const ref=colL(ci)+(ri+1),st=ri===title?' s="2"':bold.includes(ri)?' s="1"':"";
 if(v&&typeof v==="object")return v.u?`<c r="${ref}"${st} t="str"><f>HYPERLINK("${X(v.u)}","${X(v.t)}")</f><v>${X(v.t)}</v></c>`:`<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${X(v.t)}</t></is></c>`;
 return typeof v==="number"?`<c r="${ref}"${st}><v>${v}</v></c>`:`<c r="${ref}"${st} t="inlineStr"><is><t xml:space="preserve">${X(v)}</t></is></c>`}).join("")+"</row>").join("");
 return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><cols>'+widths.map((w,i)=>`<col min="${i+1}" max="${i+1}" width="${w}" customWidth="1"/>`).join("")+"</cols><sheetData>"+R+"</sheetData></worksheet>"}
 function toXlsx(r){const NS='xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',H='<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
-const s1=[[r.title],[r.sub],[r.gen],[],r.head,...r.body],s2=[r.sumHead,...r.sum];
+const s1=[[r.xTitle||r.title],[r.sub],["Company ID: "+(r.companyId||"-")+"   |   "+(r.gen||"")],[],r.head,...r.body],s2=[r.sumHead,...r.sum];
 const files=[
 {name:"[Content_Types].xml",data:H+'<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'},
 {name:"_rels/.rels",data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'},
 {name:"xl/workbook.xml",data:H+`<workbook ${NS} xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Visits" sheetId="1" r:id="rId1"/><sheet name="Summary" sheetId="2" r:id="rId2"/></sheets></workbook>`},
 {name:"xl/_rels/workbook.xml.rels",data:H+'<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'},
-{name:"xl/styles.xml",data:H+`<styleSheet ${NS}><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2B84B"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
-{name:"xl/worksheets/sheet1.xml",data:sheetXml(s1,[4],r.widths.map(x=>Math.round(x/9)))},
+{name:"xl/styles.xml",data:H+`<styleSheet ${NS}><fonts count="3"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFF2B84B"/><name val="Calibri"/></font><font><b/><sz val="16"/><color rgb="FFF2B84B"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0B1E42"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="2" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`},
+{name:"xl/worksheets/sheet1.xml",data:sheetXml(s1,[4],r.widths.map(x=>Math.round(x/9)),0)},
 {name:"xl/worksheets/sheet2.xml",data:sheetXml(s2,[0],r.sumWidths.map(x=>Math.round(x/10)))}];
 return zipFiles(files,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")}
 function renderPages(r){const W=1684,H=1190,M=44,RH=40,FF='"Segoe UI",Arial,"Noto Naskh Arabic","Noto Nastaliq Urdu",sans-serif',pages=[];let x,y;
@@ -317,9 +435,13 @@ if(ps.length<=10){const t=document.createElement("canvas");t.width=ps[0].width;t
 ps.forEach((p,i)=>setTimeout(()=>p.toBlob(b=>save(b,fname("png").replace(".png","_p"+(i+1)+".png"))),i*700))}
 $("rsh").onclick=runReport;
 document.querySelectorAll("[data-rg]").forEach(b=>b.onclick=()=>rangeBtn(b.dataset.rg));
-$("dx").onclick=()=>save(toXlsx(RP),fname("xlsx"));
-$("dp").onclick=()=>save(toPdf(renderPages(RP)),fname("pdf"));
+$("dx").onclick=()=>exportXlsx(RP,fname("xlsx"));
+$("dp").onclick=()=>exportPdf(RP,fname("pdf"));
 $("dt").onclick=()=>save(new Blob(["\ufeff"+toText(RP)],{type:"text/plain;charset=utf-8"}),fname("txt"));
 $("di").onclick=dlImage;
+$("tld").value=ymd(new Date());$("tld").onchange=loadTimeline;$("tlm").onchange=loadTimeline;
+$("tlp").onclick=()=>{if(TLR.length)exportPdf(timelineReport(),"MartOps_Activity_"+$("tld").value+".pdf")};
+$("tlx").onclick=()=>{if(TLR.length)exportXlsx(timelineReport(),"MartOps_Activity_"+$("tld").value+".xlsx")};
+setInterval(()=>{if(D&&!document.hidden&&$("tld").value===ymd(new Date()))loadTimeline()},60000);
 
 </script></body></html>
