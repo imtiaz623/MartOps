@@ -5,6 +5,7 @@ import 'package:location/location.dart' as lc;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'about.dart';
+import 'guide.dart';
 import 'main.dart' show logout;
 import 'api.dart';
 import 'presence_service.dart';
@@ -29,11 +30,22 @@ class _StaffHomeState extends State<StaffHome> {
   void initState() {
     super.initState();
     FlutterForegroundTask.addTaskDataCallback(_onData);
-    _load();
+    _boot();
   }
 
   @override
   void dispose() { FlutterForegroundTask.removeTaskDataCallback(_onData); super.dispose(); }
+
+  /// First time on this phone: walk the manager through the setup, then start tracking.
+  Future<void> _boot() async {
+    final p = await SharedPreferences.getInstance();
+    if (p.getBool('guide_seen') != true) {
+      await WidgetsBinding.instance.endOfFrame;
+      if (mounted) { await Navigator.push(context, MaterialPageRoute(builder: (_) => const GuideScreen())); }
+      await p.setBool('guide_seen', true);
+    }
+    _load();
+  }
 
   void _onData(Object d) {
     if (d is Map && mounted) {
@@ -200,42 +212,82 @@ class _StaffHomeState extends State<StaffHome> {
     return 'Company time: ${hm(w['s'])} - ${hm(w['e'])} ($days). Is ke ilawa koi record nahi hota.';
   }
 
+  Color get _heroColor => st == 'BRANCH' ? Colors.green : (st == 'NONET' || gpsOff) ? Colors.redAccent : st == 'OFFDUTY' ? Colors.blueGrey : Colors.orange;
+  IconData get _heroIcon => st == 'BRANCH' ? Icons.location_on : st == 'OFFDUTY' ? Icons.nightlight_round : st == 'MOBILE' ? Icons.signal_cellular_alt : st == 'NONET' ? Icons.wifi_off : st == 'OTHER' ? Icons.wifi : Icons.sync;
+
+  Widget _card(Widget child, {Color? color}) => Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: color ?? const Color(0xFF211F2B), borderRadius: BorderRadius.circular(20)),
+        child: child,
+      );
+
   @override
   Widget build(BuildContext c) {
     final here = _where;
+    final col = _heroColor;
     return Scaffold(
-      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))), IconButton(icon: const Icon(Icons.lock_outline), tooltip: 'Logout / Tracking band (PIN)', onPressed: () => _unlockAndLogout(c))]),
+      appBar: AppBar(title: Text(Session.companyName ?? 'MartOps'), actions: [
+        IconButton(icon: const Icon(Icons.menu_book_outlined), tooltip: 'Setup guide', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen()))),
+        IconButton(icon: const Icon(Icons.info_outline), tooltip: 'About / Help', onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const AboutScreen()))),
+        IconButton(icon: const Icon(Icons.lock_outline), tooltip: 'Logout / Tracking band (PIN)', onPressed: () => _unlockAndLogout(c)),
+      ]),
       body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
-        Text('Salam, ${Session.name}', style: Theme.of(c).textTheme.headlineSmall),
-        if (err.isNotEmpty) Text(err, style: const TextStyle(color: Colors.redAccent)),
-        const SizedBox(height: 12),
+        Text('Salam, ${Session.name}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700)),
+        if (err.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(err, style: const TextStyle(color: Colors.redAccent))),
+        const SizedBox(height: 14),
         if (running) ...[
-          ListTile(
-            leading: Icon(Icons.circle, color: st == 'BRANCH' ? Colors.green : (st == 'NONET' ? Colors.redAccent : Colors.orange)),
-            title: Text(st.isEmpty ? 'Check ho raha hai...' : st == 'BRANCH' ? 'Abhi: $here' : stLabel(st, detail: stD)),
-            subtitle: ssid.isNotEmpty && !unknown ? Text('Wi-Fi: $ssid') : null),
-          if (_locText.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), child: Text(_locText, style: const TextStyle(color: Colors.grey))),
-          if (unknown || gpsOff) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(gpsOff ? 'Phone ki Location (GPS) band hai.' : 'Wi-Fi ka naam nahi mil raha.', style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w600)),
-            if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
-            Row(children: [
-              TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
-              TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
+          Container(
+            padding: const EdgeInsets.all(18),
+            margin: const EdgeInsets.only(bottom: 12),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), gradient: LinearGradient(colors: [col.withAlpha(110), col.withAlpha(30)], begin: Alignment.topLeft, end: Alignment.bottomRight)),
+            child: Row(children: [
+              CircleAvatar(radius: 28, backgroundColor: col, child: Icon(_heroIcon, color: Colors.white, size: 30)),
+              const SizedBox(width: 14),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(st.isEmpty ? 'Check ho raha hai...' : st == 'BRANCH' ? 'Abhi: $here' : stLabel(st, detail: stD), style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+                if (ssid.isNotEmpty && !unknown) Padding(padding: const EdgeInsets.only(top: 2), child: Text('Wi-Fi: $ssid', style: const TextStyle(color: Colors.white70))),
+              ])),
             ]),
-          ])),
-          if (_workText.isNotEmpty) Padding(padding: const EdgeInsets.symmetric(horizontal: 16), child: Text(_workText, style: const TextStyle(fontWeight: FontWeight.w600))),
-          const Padding(padding: EdgeInsets.all(16), child: Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nWi-Fi, Location ya Data off karoge to owner ko record mein dikhega.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.grey))),
+          ),
+          if (_workText.isNotEmpty) _card(Row(children: [const Icon(Icons.schedule, size: 20), const SizedBox(width: 10), Expanded(child: Text(_workText))])),
+          if (_locText.isNotEmpty) _card(Row(children: [const Icon(Icons.my_location, size: 20), const SizedBox(width: 10), Expanded(child: Text(_locText, style: const TextStyle(color: Colors.white70)))])),
+          if (unknown || gpsOff)
+            _card(
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(gpsOff ? 'Phone ki Location (GPS) band hai.' : 'Wi-Fi ka naam nahi mil raha.', style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.w700)),
+                if (hint.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(hint, style: const TextStyle(color: Colors.orangeAccent))),
+                Row(children: [
+                  TextButton(onPressed: _ensureGps, child: const Text('Location on karo')),
+                  TextButton(onPressed: () async { await Permission.locationWhenInUse.request(); await Permission.locationAlways.request(); await openAppSettings(); }, child: const Text('App settings')),
+                ]),
+              ]),
+              color: const Color(0xFF3A2A12),
+            ),
+          _card(const Text('Tracking automatic on hai. Branch ke Wi-Fi se connect hone par visit save hoti hai. Wi-Fi off/disconnect, mobile data, internet band ya phone off hone ka record bhi owner ko dikhta hai, app band ho tab bhi.\n\nWi-Fi, Location ya Data off karoge to owner ko record mein dikhega.\n\nPhone restart ke baad khud chalne ke liye: Settings > Apps > MartOps mein Autostart ON karo aur Battery ko Unrestricted rakho.', style: TextStyle(color: Colors.white60))),
         ] else ...[
-          if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 10), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
-          FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
+          _card(Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Tracking abhi band hai', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            if (permMsg.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 6), child: Text(permMsg, style: const TextStyle(color: Colors.orangeAccent))),
+            const SizedBox(height: 10),
+            FilledButton(onPressed: starting ? null : _startService, child: Text(starting ? 'Please wait...' : 'Tracking shuru karo (permission do)')),
+            TextButton(onPressed: () => Navigator.push(c, MaterialPageRoute(builder: (_) => const GuideScreen())), child: const Text('Setup guide kholo')),
+          ])),
         ],
-        const SizedBox(height: 20),
-        const Text('Meri recent activity', style: TextStyle(fontWeight: FontWeight.w600)),
-        for (final v in visits) ListTile(
-          dense: true,
-          title: Text(v['state'] == 'BRANCH' ? '${v['branchName']}${'${v['city']}'.isEmpty ? '' : ', ${v['city']}'}' : stLabel(v['state'], detail: '${v['detail'] ?? ''}')),
-          subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min')),
-        if (visits.isEmpty) const Text('Abhi koi visit nahi.'),
+        const SizedBox(height: 8),
+        const Padding(padding: EdgeInsets.only(left: 4, bottom: 6), child: Text('Meri recent activity', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700))),
+        _card(visits.isEmpty
+            ? const Text('Abhi koi activity nahi.')
+            : Column(children: [
+                for (final v in visits.take(30))
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: Icon(v['state'] == 'BRANCH' ? Icons.location_on : Icons.circle, size: 18, color: v['state'] == 'BRANCH' ? Colors.green : Colors.orange),
+                    title: Text(v['state'] == 'BRANCH' ? '${v['branchName']}${'${v['city']}'.isEmpty ? '' : ', ${v['city']}'}' : stLabel(v['state'], detail: '${v['detail'] ?? ''}')),
+                    subtitle: Text(v['left'] == '' ? '${fmtT(v['arrived'])}  (abhi)' : '${fmtT(v['arrived'])} - ${fmtT(v['left'])}   ${v['minutes']} min'),
+                  ),
+              ])),
       ])),
     );
   }
