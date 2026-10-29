@@ -1,3 +1,5 @@
+import 'package:android_intent_plus/android_intent.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:location/location.dart' as lc;
@@ -21,11 +23,48 @@ class _Step {
 class _GuideState extends State<GuideScreen> with WidgetsBindingObserver {
   Map<String, bool> ok = {};
 
+  String _brand = '';
+
+  Future<String> _loadBrand() async {
+    try { _brand = (await DeviceInfoPlugin().androidInfo).manufacturer.toLowerCase(); } catch (_) {}
+    return _brand;
+  }
+
+  /// Phone-brand specific text: where the Autostart / battery switches are.
+  String get _autostartHelp {
+    final b = _brand;
+    if (b.contains('xiaomi') || b.contains('redmi') || b.contains('poco')) return 'Security app > Permissions > Autostart > MartOps ON. Phir Settings > Battery > MartOps > "No restrictions".';
+    if (b.contains('oppo') || b.contains('realme') || b.contains('oneplus')) return 'Settings > Apps > MartOps > Auto launch ON, aur Battery > "Allow background activity".';
+    if (b.contains('vivo') || b.contains('iqoo')) return 'Settings > Battery > Background power consumption > MartOps > Allow. Phir iManager > App manager > Autostart > MartOps ON.';
+    if (b.contains('infinix') || b.contains('tecno') || b.contains('itel') || b.contains('transsion')) return 'Phone Master > Auto-start management (ya Settings > App management) mein MartOps ON karo. Battery mein MartOps ko "No restrictions" karo.';
+    if (b.contains('samsung')) return 'Settings > Battery > Background usage limits > "Never sleeping apps" mein MartOps add karo.';
+    if (b.contains('huawei') || b.contains('honor')) return 'Settings > Battery > App launch > MartOps > "Manage manually" aur teeno switches ON.';
+    return 'Settings > Apps > MartOps > Battery > "Unrestricted". Agar "Autostart" ya "Auto launch" ho to ON karo.';
+  }
+
+  /// Tries the phone maker's own Autostart screen; falls back to the normal app settings.
+  Future<void> _openAutostart() async {
+    final b = await _loadBrand();
+    final List<List<String>> t = [];
+    if (b.contains('xiaomi') || b.contains('redmi') || b.contains('poco')) t.add(['com.miui.securitycenter', 'com.miui.permcenter.autostart.AutoStartManagementActivity']);
+    if (b.contains('oppo') || b.contains('realme')) { t.add(['com.coloros.safecenter', 'com.coloros.safecenter.permission.startup.StartupAppListActivity']); t.add(['com.oppo.safe', 'com.oppo.safe.permission.startup.StartupAppListActivity']); }
+    if (b.contains('oneplus')) t.add(['com.oneplus.security', 'com.oneplus.security.chainlaunch.view.ChainLaunchAppListActivity']);
+    if (b.contains('vivo') || b.contains('iqoo')) { t.add(['com.vivo.permissionmanager', 'com.vivo.permissionmanager.activity.BgStartUpManagerActivity']); t.add(['com.iqoo.secure', 'com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity']); }
+    if (b.contains('infinix') || b.contains('tecno') || b.contains('itel') || b.contains('transsion')) { t.add(['com.transsion.phonemaster', 'com.cyin.himgr.autostart.AutoStartActivity']); t.add(['com.transsion.phonemanager', 'com.transsion.phonemanager.autostart.AutoStartActivity']); }
+    if (b.contains('huawei') || b.contains('honor')) t.add(['com.huawei.systemmanager', 'com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity']);
+    if (b.contains('samsung')) t.add(['com.samsung.android.lool', 'com.samsung.android.sm.ui.battery.BatteryActivity']);
+    for (final x in t) {
+      try { await AndroidIntent(action: 'android.intent.action.MAIN', package: x[0], componentName: x[1]).launch(); return; } catch (_) {}
+    }
+    await openAppSettings();
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _refresh();
+    _loadBrand().then((_) { if (mounted) setState(() {}); });
   }
 
   @override
@@ -97,10 +136,16 @@ class _GuideState extends State<GuideScreen> with WidgetsBindingObserver {
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('6. Autostart (phone restart ke baad)', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            const Text('6. Autostart (phone restart ke baad) - bohat zaroori', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             const SizedBox(height: 4),
-            const Text('Kuch phones (Infinix, Tecno, Oppo, Vivo, Xiaomi) app ko khud start hone se rokte hain. Settings > Apps > MartOps mein "Autostart" ya "Auto-launch" ON karo.', style: TextStyle(color: Colors.grey)),
-            Padding(padding: const EdgeInsets.only(top: 8), child: FilledButton.tonal(onPressed: openAppSettings, child: const Text('App settings kholo'))),
+            Text(_autostartHelp, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 6),
+            const Text('Phir recent apps (square button) kholo, MartOps ke card ke menu ya pin ke nishan se "Lock" lagao, taake phone use band na kare. App ko kabhi "Force stop" mat karo.', style: TextStyle(color: Colors.grey)),
+            Padding(padding: const EdgeInsets.only(top: 8), child: Row(children: [
+              Expanded(child: FilledButton.tonal(onPressed: _openAutostart, child: const Text('Autostart settings'))),
+              const SizedBox(width: 8),
+              Expanded(child: OutlinedButton(onPressed: openAppSettings, child: const Text('App settings'))),
+            ])),
           ]),
         ),
       ),
