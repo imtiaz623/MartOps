@@ -319,7 +319,7 @@ const cv=c=>c&&typeof c==="object"?c.t:c;
 const cellText=c=>c&&typeof c==="object"?c.t+(c.u?" "+c.u:""):String(c);
 const cellHtml=c=>c&&typeof c==="object"&&c.u?`<a href="${E(c.u)}" target="_blank" rel="noopener">${E(c.t)}</a>`:E(cv(c));
 function buildReport(R,f,t){
-const mode=$("rkd").value||"abs",nb=(b,c)=>(b||"")+(c?" ("+c+")":""),tm=(ms,ref)=>!ms?"-":(dstr(ms)===dstr(ref)?tstr(ms):dstr(ms)+" "+tstr(ms));
+const mode=$("rkd").value||"abs",nb=(b,c)=>(b||"")+(c?" ("+c+")":""),tm=(ms,ref)=>!ms?"-":(dstr(ms)===dstr(ref)?tstr(ms):dstr(ms).slice(0,6)+" "+tstr(ms));
 const rows=R.rows,eps=R.episodes||[],lcs=R.locations||[],sel=id=>$(id).selectedOptions[0]?$(id).selectedOptions[0].text:"All";
 const bRows=rows.filter(v=>v.state==="BRANCH"),bmin=bRows.reduce((a,v)=>a+(Number(v.minutes)||0),0),omin=eps.reduce((a,e)=>a+e.minutes,0);
 const mgrs=new Set(rows.map(v=>v.manager).concat(eps.map(e=>e.manager)).concat(lcs.map(l=>l.manager))).size;
@@ -330,7 +330,7 @@ sub:"Period: "+f+" to "+t+"  |  "+sel("rm")+"  |  "+sel("rb"),gen:"Generated "+d
 if(mode==="abs"){
 r.head=["Date","Name","Branch","Status","Connect time","Out-of-range time","Back at branch","Time diff","Minutes","Location when left"];
 r.body=eps.map(e=>[dstr(e.left),e.manager,nb(e.branchName,e.city),e.status,tm(e.connect,e.left),tm(e.left,e.left),e.back?tm(e.back,e.left)+(e.backName&&e.backName!==e.branchName?" ("+e.backName+")":""):(e.ended?"Company time ended":"Still out"),hm(e.minutes)+(e.open?" (running)":""),e.minutes,whereC(e.locOut)]);
-r.widths=[110,140,190,300,110,110,170,110,70,280];r.aligns=["l","l","l","l","l","l","l","r","r","l"];
+r.widths=[130,130,170,280,130,120,170,110,84,250];r.aligns=["l","l","l","l","l","l","l","r","r","l"];
 const g={};eps.forEach(e=>{const o=g[e.manager]||(g[e.manager]={n:0,t:0,mx:0});o.n++;o.t+=e.minutes;o.mx=Math.max(o.mx,e.minutes)});
 r.sumHead=["Name","Out-of-range times","Total time out","Longest time out","Minutes out"];
 r.sum=Object.keys(g).sort().map(k=>[k,g[k].n,hm(g[k].t),hm(g[k].mx),g[k].t]);r.sumWidths=[300,200,240,240,160];r.sumAligns=["l","r","r","r","r"]}
