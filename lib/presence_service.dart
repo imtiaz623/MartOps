@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 
 const pingEvery = Duration(seconds: 10);  // local check (free, no server call)
-const keepAlive = Duration(minutes: 5);   // server keep-alive while nothing changes
+const keepAlive = Duration(minutes: 3);   // server keep-alive while nothing changes (owner sees 'no signal' within ~7 min if the phone is off)
 const gapAfter = Duration(minutes: 3);    // no tick for this long = phone off / app not running
 const locEvery = Duration(minutes: 5);    // GPS position is saved this often during company time (and on every status change)
 const _day = 86400000;
@@ -90,7 +90,14 @@ class PresenceHandler extends TaskHandler {
   double lastFixAcc = 0;
 
   @override
-  Future<void> onStart(DateTime ts, TaskStarter s) async { await onRepeatEvent(ts); }
+  Future<void> onStart(DateTime ts, TaskStarter s) async {
+    // Started by the phone itself (restart / app update) rather than by the manager opening the app? Remember it, the owner sees it.
+    if (s == TaskStarter.system) {
+      final p = await SharedPreferences.getInstance();
+      await p.setInt('boot_at', DateTime.now().millisecondsSinceEpoch);
+    }
+    await onRepeatEvent(ts);
+  }
 
   @override
   Future<void> onRepeatEvent(DateTime ts) async {
@@ -183,7 +190,7 @@ class PresenceHandler extends TaskHandler {
       lastTry = DateTime.now();
       final chunk = queue.take(150).toList();
       final lchunk = lq.take(150).toList();
-      final r = await rawCall(cfg['token'], 'visits', {'events': chunk, 'locs': lchunk, 'ssid': ssidShown});
+      final r = await rawCall(cfg['token'], 'visits', {'events': chunk, 'locs': lchunk, 'ssid': ssidShown, 'boot': p.getInt('boot_at') ?? 0});
       if (r['ok'] == true) {
         lastSent = DateTime.now();
         await p.reload();
